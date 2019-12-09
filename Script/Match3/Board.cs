@@ -6,6 +6,9 @@ using Unity.Mathematics;
 using UnityEngine;
 using System.Linq;
 using Mirror;
+using Unity.Mathematics;
+using Random = Unity.Mathematics.Random;
+
 
 /// <summary>
 /// CORE MODULE
@@ -16,7 +19,7 @@ using Mirror;
 /// </summary>
 [RequireComponent((typeof(BoardDeadLock)))]
 [RequireComponent((typeof(BoardShuffle)))]
-public class Board : NetworkBehaviour
+public class Board : MonoBehaviour
 {
     public static Board instance;
 
@@ -69,6 +72,7 @@ public class Board : NetworkBehaviour
     private int scoreMutiplier = 0;
 
     public bool isRefilling = false;
+    public bool m_playerInputEnabled = false;
 
     private BoardDeadLock m_boardDeadLock;
     private BoardShuffle m_boaardShuffle;
@@ -156,7 +160,7 @@ public class Board : NetworkBehaviour
     }
 
     //
-    private List<GamePieces> FindCollectiableAt(int i,bool clearAtBottom=false){
+    private List<GamePieces> FindCollectiableAt(int row,bool clearAtBottom=false){
     		List<GamePieces> foundCollectiables = new List<GamePieces>();
 
 
@@ -173,12 +177,12 @@ public class Board : NetworkBehaviour
     				}
     			}
     		}
-    		reurn foundCollectiables;
+    		return foundCollectiables;
     }
 
     //Can add collectiable
     private bool CanAddCollectiable(){
-    	return (Random.Range(0f,1f)<=chanceForCollectiable && collectiableCount>=0);
+    	return (UnityEngine.Random.Range(0f,1f)<=chanceForCollectiable && collectiableCount>=0);
     }
 
     private GamePieces FillRandomCollectiablesAt(int x,int y ,float falseYOffset =0f, float moveTime=1.0f){
@@ -212,7 +216,7 @@ public class Board : NetworkBehaviour
         }
     }
 
-    private void MakeGamePieces(GameObject gps, int gpX, int gpY, int faseYOffset, float moveTime=0.1f)
+    private void MakeGamePieces(GameObject gps, int gpX, int gpY, float faseYOffset, float moveTime=0.1f)
     {
         if (gps != null && IsInBound(gpX, gpY))
         {
@@ -229,7 +233,7 @@ public class Board : NetworkBehaviour
         }
     }
 
-    private void PlaceGamePieces(GamePieces gamePiece, int gpX, int gpY)
+    public void PlaceGamePieces(GamePieces gamePiece, int gpX, int gpY)
     {
         if (gamePiece==null)
         {
@@ -265,13 +269,130 @@ public class Board : NetworkBehaviour
         return GetRandomObject(gamePiecePrefab);
     }
 
+    
     #endregion
 
     #region Tile
 
-    
+    public void SwitchTiles(Tile click, Tile target)
+    {
+        StartCoroutine(SwitchTileRoutine(click, target));
+    }
 
- 
+    public IEnumerator SwitchTileRoutine(Tile clickTile, Tile targetTile)
+    {
+        if (m_playerInputEnabled && !GameManager.Instance.IsGameover)
+        {
+            GamePieces clickPiece = m_allGamePieces[clickTile.xIndex, clickTile.yIndex];
+            GamePieces targetPiece = m_allGamePieces[targetTile.xIndex, targetTile.yIndex];
+            
+            //
+            if (clickPiece !=null && targetPiece !=null)
+            {
+                clickPiece.Move(targetTile.xIndex,targetTile.yIndex,fillMovetime);
+                targetPiece.Move(clickTile.xIndex,clickTile.yIndex,fillMovetime);
+                
+                //
+                yield return new WaitForSeconds(swapTime);
+                
+                //FindMatch
+                List<GamePieces> clickPiecesMatches = FindMatchesAt(clickTile.xIndex, clickTile.yIndex);
+                List<GamePieces> targetPiecesMatches =FindMatchesAt(targetTile.xIndex,targetTile.yIndex);
+                
+                #region ColorBomb
+                List<GamePieces> colorMatches = new List<GamePieces>();
+                //
+                if (IsColorBomb(clickPiece) && IsColorBomb(targetPiece))
+                {
+                    targetPiece.matchValue = clickPiece.matchValue;
+                    colorMatches = FindAllMatchValue(clickPiece.matchValue);
+                }else if(!IsColorBomb(clickPiece) && IsColorBomb(targetPiece))
+                {
+                    foreach (GamePieces piece in m_allGamePieces)
+                    {
+                        if (!colorMatches.Contains(piece))
+                        {
+                            colorMatches.Add(piece);
+                        }
+                    }
+                }
+                #endregion
+                
+                //no match return 
+                //cost if has point
+                if (targetPiecesMatches.Count==0 && clickPiecesMatches.Count==0 && colorMatches.Count==0)
+                {
+                    clickPiece.Move(clickTile.xIndex,clickTile.yIndex,fillMovetime);
+                    targetPiece.Move(targetTile.xIndex,targetTile.yIndex,fillMovetime);
+                    
+                }
+                else
+                {
+                    yield return new WaitForSeconds(swapTime);
+                    
+                    //
+
+                    #region Drop Bomb
+                    Vector2 swapDirection=new Vector2(targetTile.xIndex - clickTile.yIndex , targetTile.xIndex-clickTile.yIndex);
+                    
+                    //
+                    m_clickedBomb = DropBomb(clickTile.xIndex, clickTile.yIndex, swapDirection, clickPiecesMatches);
+                    m_targetBomb = DropBomb(targetTile.xIndex, targetTile.yIndex, swapDirection, targetPiecesMatches);
+                    
+                    //
+                    if (m_clickedBomb != null && targetPiece != null)
+                    {
+                        GamePieces clickBombPieces = m_clickedBomb.GetComponent<GamePieces>();
+                        if (!IsColorBomb(clickBombPieces))
+                        {
+                            clickBombPieces.ChangeColor(targetPiece);
+                        }
+                    }
+                    
+                    //
+                    if (m_targetBomb!=null && clickPiece!=null)
+                    {
+                        GamePieces tbp = m_targetBomb.GetComponent<GamePieces>();
+                        //
+                        if (!IsColorBomb(tbp))
+                        {
+                            tbp.ChangeColor(clickPiece);
+                        }
+                    }
+
+                    #endregion
+                    
+                    //
+                    List<GamePieces> pieceToClear = clickPiecesMatches.Union(targetPiecesMatches).ToList()
+                        .Union(colorMatches).ToList();
+                    //REFILL PIECES CORE
+                    yield return StartCoroutine(ClearAndRefill(pieceToClear));
+                    if (GameManager.Instance !=null)
+                    {
+                        GameManager.Instance.UpdateMoves();
+                    }
+
+
+                }
+
+            }
+        }
+    }
+
+    private GameObject DropBomb(int clickTileXIndex, int clickTileYIndex, Vector2 swapDirection, List<GamePieces> clickPiecesMatches)
+    {
+        throw new NotImplementedException();
+    }
+
+  
+
+
+    private bool IsColorBomb(GamePieces clickPiece)
+    {
+        throw new NotImplementedException();
+    }
+
+
     private void SetupTile()
     {
         foreach (StartingObject sobj in startingTiles)
@@ -320,7 +441,7 @@ public class Board : NetworkBehaviour
     	//Get Board
     	for(int i=0;i<width;i++){
     		for(int j =0;j<height;j++){
-    			if(m_allGamePieces[i,j] ==null && m_allTiles[i,j].tileType !=Tiletype.Obstacle){
+    			if(m_allGamePieces[i,j] ==null && m_allTiles[i,j].tileType !=TileType.Obstcle){
     				//Can add collectiable
     				if(j==height-1 && CanAddCollectiable()){
     					FillRandomCollectiablesAt(i,j,falseYOffset,moveTime);
@@ -348,8 +469,185 @@ public class Board : NetworkBehaviour
       
     }
 
+    //Refill und clear matches gps
+   void ClearAndRefillBoardRoutline(List<GamePieces> ptc)
+   {
+       StartCoroutine(ClearAndRefill(ptc));
+   }
 
-    #endregion
+    //When Matches the Refill according to Breaking row column(hor&ver)
+   public IEnumerator ClearAndRefill(List<GamePieces> gps)
+   {
+    m_playerInputEnabled=false;
+    isRefilling=true;
+
+    //
+    List<GamePieces> matches =gps;
+
+    //Cal collect score
+    scoreMutiplier=0;
+    //REFILL MODULE
+    do{
+        scoreMutiplier++;
+        //Collapse
+        yield return StartCoroutine(RefillCollapseRoutine(matches));
+        //
+        yield return null;
+        //
+        yield return StartCoroutine(RefillRoutine());
+        //
+        matches =FindAllMatches();
+        //
+        yield return new WaitForSeconds(fillMovetime);
+    }while(matches.Count!=0);
+
+    //CHECK DEADLOCK if yes the shuffle else keep matches
+    if(m_boardDeadLock.IsDeadLocked(m_allGamePieces,3)){
+        yield return new WaitForSeconds(0.4f);
+        //Shuffle Board
+        yield return StartCoroutine(ShuffleBoard());
+        //
+        yield return new WaitForSeconds(0.4f);
+        //
+        yield return StartCoroutine(RefillRoutine());
+
+        //
+        yield return new WaitForSeconds(0.4f);
+    }
+    //
+    m_playerInputEnabled=false;
+    isRefilling=false;
+    
+    
+       yield return null;
+   }
+
+
+    //Shuffle When board has deadlock 
+    //For Rpg module decrease player health with a buff
+   public IEnumerator ShuffleBoard(){
+       List<GamePieces> allpcs = new List<GamePieces>();
+       //
+       foreach(GamePieces p in m_allGamePieces){
+           allpcs.Add(p);
+       }
+
+       //
+       while(!IsCollapsed(allpcs)){
+           yield return null;
+       }
+
+       //Remove Shuffle
+    //    List<GamePieces> normalPieces= m_boaardShuffle.RemoveNormal();
+
+
+        //
+        // m_boaardShuffle.SuffleList(normalPieces);
+
+        //Fill Board From LIst
+        FillBoardFromList(normalPieces);
+
+
+       yield return null;
+   }
+
+    public IEnumerator RefillCollapseRoutine(List<GamePieces> gps){
+        List<GamePieces> mgps = new List<GamePieces>();
+        //
+        List<GamePieces> matches = new List<GamePieces>();
+        
+        yield return null;
+
+        //
+        bool isFinished=false;
+        while(!isFinished){
+            //Check Refill
+            List<GamePieces> bps = GetBombPieces(gps);
+            //
+            gps = gps.Union(bps).ToList();
+            //
+            bps = GetBombPieces(gps);
+            //collet
+            List<GamePieces> collectedPieces = FindCollectiableAt(0,true);
+            
+            //Collectiable
+            List<GamePieces> allCollectiables= FindCollectiables();
+            //
+            List<GamePieces> blockers= gps.Intersect(allCollectiables).ToList();
+            //union blockers to collectiable pieces
+            collectedPieces = collectedPieces.Union(blockers).ToList();
+            //
+            collectiableCount -= collectedPieces.Count;
+            //Union collect pieces
+            gps = gps.Union(collectedPieces).ToList();
+
+            //
+            List<int>columnToCollapse = GetColumn(gps);
+
+            //Clear Pieces At
+            ClearPiecesAt(gps,bps);
+            //
+            BreakTileAt(gps);
+            //Check Bomb Effect active (click)
+            if(m_clickedBomb !=null){
+                //Activity Effect
+                ActivateBomb(m_clickedBomb);
+                m_clickedBomb=null;
+            }
+
+             if(m_clickedBomb !=null){
+                //Activity Effect
+                ActivateBomb(m_targetBomb);
+                m_targetBomb=null;
+            }
+
+            //Refill Collapse Routine 
+            yield  return new WaitForSeconds(0.4f);
+            //Collapse for column matches pieces
+            mgps =   CollapseColumn(columnToCollapse);
+            //
+            while(!IsCollapsed(mgps)){
+                yield return null;
+            }
+
+            yield return WaitForSeconds(0.4f);
+
+            //find any mathes that can collapse
+            matches = FindMatches(mgps);
+            //
+            collectedPieces = FindCollectiables(0,true);
+            //
+            matches = matches.Union(collectedPieces).ToList();
+
+            //End Matches activate RefillRoutine
+            if(matches.Count == 0){
+                isFinished=true;
+
+                yield return StartCoroutine(RefillRoutine());
+                //
+                yield return new WaitForSeconds(0.4f);
+
+            }else{
+                scoreMutiplier++;
+                //TODO SOUND PLAY SOUND
+                //
+                yield return StartCoroutine(ClearAndRefillBoardRoutline(matches));
+                
+            }
+            //
+
+            
+        }
+        yield return null;
+    }
+
+    public IEnumerator RefillRoutine(){
+
+       FillBoard(falseYOffset,fillMovetime);
+       yield return null;
+    }
+
+  #endregion
 
 
     #region	CalTotalRoundEnd
@@ -359,6 +657,10 @@ public class Board : NetworkBehaviour
     #region ClearModule
     //das module include all clear by tile und check can refill
 
+  private void ClearPiecesAt(int i, int i1)
+  {
+      throw new NotImplementedException();
+  }
 
 
     #endregion
@@ -368,8 +670,8 @@ public class Board : NetworkBehaviour
     //das module ist suit for check board bonud und can refill the routline
     bool HasMatchOnFill(int i,int j,int minLen=3){
         //when collectiable(3) then cause match effect und active refillroutline
-        List<GamePieces> leftMatches = FindMatches(i,j,new Vector3(0,-1),minLen);
-        List<GamePieces> downwardMatches=FindMatches(i,j,new Vector3(-1,0),minLen);
+        List<GamePieces> leftMatches = FindMatches(i,j,0,new Vector3(0,-1),minLen);
+        List<GamePieces> downwardMatches=FindMatches(i,j,0,new Vector3(-1,0),minLen);
         //
         if(leftMatches==null){
             leftMatches =new List<GamePieces>();
@@ -391,7 +693,7 @@ public class Board : NetworkBehaviour
 
     //return array of rnd gameobject
     public GameObject GetRandomObject(GameObject[] prefabarray){
-        int rndIndex= Random.Range(0,prefabarray.Length);
+        int rndIndex=UnityEngine.Random.Range(0,prefabarray.Length);
         //
         return prefabarray[rndIndex];
     }
@@ -400,30 +702,205 @@ public class Board : NetworkBehaviour
     #endregion
 
     #region TileInteactive
-    public void DragTile(){
-
+    public void DragTile(Tile tile){
+        if (m_clickedTiles!=null && IsNextTo(tile,m_clickedTiles))
+        {
+            m_targetTiles = tile;
+        }
     }
     public void RelaseTile(){
+        if (m_clickedTiles != null && m_targetTiles!=null)
+        {
+            SwitchTiles(m_clickedTiles, m_targetTiles);
+            
+        }
 
+        m_clickedTiles = null;
+        m_targetTiles = null;
     }
 
-
+public void ClickTile(Tile tile)
+    {
+        if (m_clickedTiles==null)
+        {
+            m_clickedTiles = tile;
+        }
+    }
     #endregion
 
+    #region Matches
+
+    private List<GamePieces> FindAllMatchValue(object matchValue)
+    {
+        throw new NotImplementedException();
+    }
+
+        #endregion
 
     #region Matches Module
-    List<GamePieces> FindMatches(int x,int y,int z=0,float falseYOffset=0,float moveTime=1.0f){
+    List<GamePieces> FindMatches(int x,int y,int z,Vector3 pos,float falseYOffset=0,float moveTime=1.0f,int minLength=3)
+    {
+        List<GamePieces> matches = new List<GamePieces>();
+        
+        //
+        GamePieces startPices = null;
+        
+        //
+        if (IsInBound(x,y))
+        {
+            startPices = m_allGamePieces[x, y];
+        }
+        //
+        if (startPices != null)
+        {
+            matches.Add(startPices);
+        }
+        else
+        {
+            return null;
+        }
+        
+        //
+        int nextX;
+        int nextY;
+
+        int maxValue = (width > height) ? width : height;
+
+
+        for (int i = 0; i < maxValue; i++)
+        {
+            nextX=x + (int)math.clamp(pos.x,-1,1)*i;
+            nextY = y + (int) math.clamp(pos.y, -1, 1) * i;
+            
+            //
+            
+        
+        if (!IsInBound(nextX, nextY))
+        {
+            break;
+        }
+        //
+        GamePieces nextPieces = m_allGamePieces[nextX, nextY];
+        if (nextPieces == null)
+        {
+            break;
+        }
+        else
+        {
+            if (nextPieces.matchValue == startPices.matchValue && !matches.Contains(nextPieces) && nextPieces.matchValue != MatchValue.STR)
+            {
+                matches.Add(nextPieces);
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        
+        }
+        //
+        if (matches.Count >= minLength)
+        {
+            return matches;
+        }
+
         return null;
+
     }
-    List<GamePieces>FindHorizontial(int x,int y,int z=0,Vector3 pos,float falseYOffset =0,flost moveTime=1.0f){
-        return null;
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="z"></param>
+    /// <param name="pos"></param>
+    /// <param name="falseYOffset"></param>
+    /// <param name="moveTime"></param>
+    /// <param name="minLength"></param>
+    /// <returns></returns>
+    List<GamePieces>FindHorizontial(int x,int y,int z,Vector3 pos,float falseYOffset =0,float moveTime=1.0f,int minLength=3)
+    {
+        List<GamePieces> rightMatches = FindMatches(x, y, 0, new Vector2(1, 0));
+        List<GamePieces> leftMatches = FindMatches(x, y, 0, new Vector2(-1, 0));
+        
+        //
+        if (rightMatches==null)
+        {
+            rightMatches = new List<GamePieces>();
+        }
+
+        if (leftMatches == null)
+        {
+            leftMatches = new List<GamePieces>();
+        }
+        
+        //
+        var combineMatches = rightMatches.Union(leftMatches).ToList();
+
+        return (combineMatches.Count >= minLength) ? combineMatches : null;
+
     }
 
-    List<GamePieces> FindVertialMatches(int x,int y ,int z=0,Vector3 pos,float falseYOffset=0,float moveTime=1.0f){
-        return null;
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="z"></param>
+    /// <param name="pos"></param>
+    /// <param name="falseYOffset"></param>
+    /// <param name="moveTime"></param>
+    /// <returns></returns>
+    List<GamePieces> FindVertialMatches(int x,int y ,int z,Vector3 pos,float falseYOffset=0,float moveTime=1.0f,int minLenth=3)
+    {
+        List<GamePieces> upPieces = FindMatches(x, y, 0, new Vector2(0, 1));
+        List<GamePieces> downPieces = FindMatches(x, y, 0,new Vector2(0, -1));
+        
+        if(upPieces==null ){upPieces=new List<GamePieces>();}
+
+        if (downPieces == null)
+        {
+            downPieces=new List<GamePieces>();
+        }
+
+        if (upPieces == null)
+        {
+            upPieces = new List<GamePieces>();
+        }
+
+        var combinePieces = upPieces.Union(downPieces).ToList();
+        return (combinePieces.Count>=minLenth)?combinePieces:null;
+    }
+    
+    private List<GamePieces> FindMatchesAt(int x, int y,int minLength=3)
+    {
+        List<GamePieces> verPieces = FindVertialMatches(x, y,0,new Vector3(x,y));
+        List<GamePieces> horPieces = FindHorizontial(x, y, 0,new Vector3(x,y));
+        
+        if(verPieces==null ){verPieces=new List<GamePieces>();}
+
+        if (verPieces == null)
+        {
+            verPieces=new List<GamePieces>();
+        }
+
+        if (horPieces == null)
+        {
+            horPieces = new List<GamePieces>();
+        }
+
+        var combinePieces = horPieces.Union(verPieces).ToList();
+        return combinePieces;
     }
 
+    public void FindAllMatches(){
+
+    }
     #endregion
 
+
+    
 }
 

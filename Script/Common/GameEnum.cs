@@ -6,7 +6,9 @@
 //Matches Collectiable Type
 public enum TileType
 {
-    
+    Obstcle,
+    Normal,
+	Breakable,
 }
 
 public enum MatchValue{
@@ -16,6 +18,7 @@ public enum MatchValue{
 	INT=3,
 	SWORD=4,
 	ARMOR=5,
+	
 }
 public enum SlotType
 {
@@ -26,7 +29,7 @@ public enum SlotType
 }
 
 //Breakable Type
-public enum BombType;
+public enum BombType
 {
 	None,
 	Column,
@@ -37,7 +40,16 @@ public enum BombType;
 
 }
 
-public enum
+
+public enum InterType
+{
+	Linear,
+	EaseOut,
+	EaseIn,
+	SmoothStep,
+	SmootherStep,
+}
+
 
 ////////////////RPG Module
 
