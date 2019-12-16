@@ -433,7 +433,7 @@ public class Board : MonoBehaviour
 
     #region FillBoard
     //Fill with the board .
-  private void FillBoard(int falseYOffset=0, float moveTime=0.1f)
+  private void FillBoard(float falseYOffset=0, float moveTime=0.1f)
     {
     	int maxIterations = 100;
     	int iterations = 0;
@@ -470,9 +470,9 @@ public class Board : MonoBehaviour
     }
 
     //Refill und clear matches gps
-   void ClearAndRefillBoardRoutline(List<GamePieces> ptc)
+   IEnumerator ClearAndRefillBoardRoutline(List<GamePieces> ptc)
    {
-       StartCoroutine(ClearAndRefill(ptc));
+      yield return StartCoroutine(ClearAndRefill(ptc));
    }
 
     //When Matches the Refill according to Breaking row column(hor&ver)
@@ -538,18 +538,50 @@ public class Board : MonoBehaviour
        }
 
        //Remove Shuffle
-    //    List<GamePieces> normalPieces= m_boaardShuffle.RemoveNormal();
+       List<GamePieces> normalPieces= m_boaardShuffle.RemoveNormalPieces(m_allGamePieces);
 
 
         //
-        // m_boaardShuffle.SuffleList(normalPieces);
+        m_boaardShuffle.SuffleList(normalPieces);
 
         //Fill Board From LIst
         FillBoardFromList(normalPieces);
 
+        //
+        m_boaardShuffle.MovePieces(m_allGamePieces,swapTime);
 
+        //
+        List<GamePieces> matches = FindAllMatches();
+        //
+        StartCoroutine(ClearAndRefillBoardRoutline(matches));
        yield return null;
    }
+
+    private void FillBoardFromList(List<GamePieces> normalPieces)
+    {
+        Queue<GamePieces> unsedPieces = new Queue<GamePieces>(normalPieces);
+
+        //
+        int maxIterations =100;
+        int iterations =0;
+        //
+        for(int i=0;i<width;i++){
+            for(int j=0;j<height;j++){
+                if(m_allGamePieces[i,j]==null && m_allTiles[i,j].tileType!=TileType.Obstcle){
+                    //
+                    unsedPieces.Enqueue(m_allGamePieces[i,j]);
+                    //
+                    m_allGamePieces[i,j] = unsedPieces.Dequeue();
+                    //
+                    iterations++;
+                    //
+                    if(iterations>=maxIterations){
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     public IEnumerator RefillCollapseRoutine(List<GamePieces> gps){
         List<GamePieces> mgps = new List<GamePieces>();
@@ -610,7 +642,7 @@ public class Board : MonoBehaviour
                 yield return null;
             }
 
-            yield return WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.4f);
 
             //find any mathes that can collapse
             matches = FindMatches(mgps);
@@ -641,9 +673,59 @@ public class Board : MonoBehaviour
         yield return null;
     }
 
+    private List<int> GetColumn(List<GamePieces> gps)
+    {
+       List<int>columns=new List<int>();
+
+       //
+       foreach(GamePieces p in gps){
+           if(p!=null){
+               if(!columns.Contains(p.xIndex)){
+                   columns.Add(p.xIndex);
+               }
+           }
+       }
+       return columns;
+    }
+
+    private void ActivateBomb(GameObject m_clickedBomb)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BreakTileAt(List<GamePieces> gps)
+    {
+        throw new NotImplementedException();
+    }
+
+    private List<GamePieces> GetBombPieces(List<GamePieces> gps)
+    {
+        throw new NotImplementedException();
+    }
+
+    private List<GamePieces> FindCollectiables(int v1, bool v2)
+    {
+        throw new NotImplementedException();
+    }
+
+    private List<GamePieces> FindMatches(List<GamePieces> mgps)
+    {
+        throw new NotImplementedException();
+    }
+
+    private bool IsCollapsed(List<GamePieces> mgps)
+    {
+        throw new NotImplementedException();
+    }
+
+    private List<GamePieces> CollapseColumn(List<int> columnToCollapse)
+    {
+        throw new NotImplementedException();
+    }
+
     public IEnumerator RefillRoutine(){
 
-       FillBoard(falseYOffset,fillMovetime);
+       FillBoard(fillYoffset,fillMovetime);
        yield return null;
     }
 
@@ -657,7 +739,12 @@ public class Board : MonoBehaviour
     #region ClearModule
     //das module include all clear by tile und check can refill
 
-  private void ClearPiecesAt(int i, int i1)
+  private void ClearPiecesAt(List<GamePieces> gps, List<GamePieces> bps)
+  {
+      throw new NotImplementedException();
+  }
+
+  private void ClearPiecesAt(int x, int y)
   {
       throw new NotImplementedException();
   }
@@ -683,12 +770,14 @@ public class Board : MonoBehaviour
 
         }
         //
-        return ((leftMatches.Count>0) || (downwardMatches.Count>0);
+        return ((leftMatches.Count>0) || (downwardMatches.Count>0));
 
     }
 
-    bool IsNextTo(Tile start ,Tile end){
 
+
+    bool IsNextTo(Tile start ,Tile end){
+        return true;
     }
 
     //return array of rnd gameobject
@@ -895,8 +984,8 @@ public void ClickTile(Tile tile)
         return combinePieces;
     }
 
-    public void FindAllMatches(){
-
+    public List<GamePieces> FindAllMatches(){
+        return null;
     }
     #endregion
 

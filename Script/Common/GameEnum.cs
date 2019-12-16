@@ -18,7 +18,7 @@ public enum MatchValue{
 	INT=3,
 	SWORD=4,
 	ARMOR=5,
-	
+	OTHER=6,	//other collectiable
 }
 public enum SlotType
 {
@@ -75,4 +75,17 @@ public enum SceneType{
 	MainGame,
 	LoadingPro,
 
+}
+
+
+
+////////////////////MIRROR::SERVER&CLIENT
+//NETWORKSTATE
+public enum NetworkState{
+	None,
+	Lobby,
+	Online,
+	World,
+	HandShake,
+    Offline,
 }
