@@ -15,39 +15,32 @@ using System.IO;
 //SQL TABLE QUERY
 //character
 #region DB TABLE
-class Character{
-    [PrimaryKey][AutoIncrement]
-    public int CIDS { get; set; }
-    public string Account { get; set; }
-    public string CharacterName { get; set; }
-    public string className { get; set; }
-    // public float X { get; set; }
-    // public float Y { get; set; }
-    // public float Z { get; set; }
-    // public int CLevel { get; set; }      
-    // public int CSTR { get; set; }
-    // public int CDEX { get; set; }
-    // public int CINT { get; set; }
-    // public int CMoney { get; set; }
-    // public int CEXP { get; set; }
-    // public int CHP { get; set; }
-    // public int CMP { get; set; }
-    // public  int CGold { get; set; }
-
-    public bool IsOnline { get; set; }
-    public DateTime lastSaveTime { get; set; }
-    public bool IsDeleted { get; set; }
-    
-}
-//account
-class Account{
-    [PrimaryKey]
-    [AutoIncrement]
-    public int IDS{get;set;}
-    public string UserName{get;set;}
-    public string PWd{get;set;}
-    public bool IsOnline{get;set;}
-}
+class characters
+    {
+        [PrimaryKey] // important for performance: O(log n) instead of O(n)
+        [Collation("NOCASE")] // [COLLATE NOCASE for case insensitive compare. this way we can't both create 'Archer' and 'archer' as characters]
+        public string name { get; set; }
+        [Indexed] // add index on account to avoid full scans when loading characters
+        public string account { get; set; }
+        public string classname { get; set; } // 'class' isn't available in C#
+        // online status can be checked from external programs with either just
+        // just 'online', or 'online && (DateTime.UtcNow - lastsaved) <= 1min)
+        // which is robust to server crashes too.
+        public bool online { get; set; }
+        public DateTime lastsaved { get; set; }
+        public bool deleted { get; set; }
+    }
+   
+ class accounts
+    {
+        [PrimaryKey] // important for performance: O(log n) instead of O(n)
+        public string name { get; set; }
+        public string password { get; set; }
+        // created & lastlogin for statistics like CCU/MAU/registrations/...
+        public DateTime created { get; set; }
+        public DateTime lastlogin { get; set; }
+        public bool banned { get; set; }
+    }
 //inventory
 class Inventory{
     [PrimaryKey]
@@ -110,15 +103,15 @@ public class DatabaseTHDN:MonoBehaviour{
 
           Debug.Log("create table");
         // create tables if they don't exist yet or were deleted
-        sqlConect.CreateTable<Account>();
-        sqlConect.CreateTable<Character>();
+        sqlConect.CreateTable<accounts>();
+        sqlConect.CreateTable<characters>();
         
 
         // addon system hooks
         Util.InvokeMany(typeof(DatabaseTHDN), this, "Initialize_"); // TODO remove later. let's keep the old hook for a while to not break every single addon!
         Util.InvokeMany(typeof(DatabaseTHDN), this, "Connect_"); // the new hook!
 
-        //Debug.Log("connected to database");
+        Debug.Log("connected to database");
     }
 
    void OnApplicationQuit()
@@ -175,14 +168,14 @@ public class DatabaseTHDN:MonoBehaviour{
         {
             // demo feature: create account if it doesn't exist yet.
             // note: sqlite-net has no InsertOrIgnore so we do it in two steps
-            if (sqlConect.FindWithQuery<Account>("SELECT * FROM Account WHERE name=?", account) == null)
-                sqlConect.Insert(new Account{ UserName=account, PWd=password,IsOnline=false});
+            if (sqlConect.FindWithQuery<accounts>("SELECT * FROM accounts WHERE name=?", account) == null)
+                sqlConect.Insert(new accounts{ name=account, password=password});
 
             // check account name, password, banned status
-            if (sqlConect.FindWithQuery<Account>("SELECT * FROM Account WHERE name=? AND password=? and banned=0", account, password) != null)
+            if (sqlConect.FindWithQuery<accounts>("SELECT * FROM accounts WHERE name=? AND password=? and banned=0", account, password) != null)
             {
                 // save last login time and return true
-                sqlConect.Execute("UPDATE Account SET lastlogin=? WHERE name=?", DateTime.UtcNow, account);
+                sqlConect.Execute("UPDATE accounts SET lastlogin=? WHERE name=?", DateTime.UtcNow, account);
                 return true;
             }
         }
@@ -196,13 +189,13 @@ public class DatabaseTHDN:MonoBehaviour{
     {
         // checks deleted ones too so we don't end up with duplicates if we un-
         // delete one
-        return sqlConect.FindWithQuery<Character>("SELECT * FROM Character WHERE name=?", characterName) != null;
+        return sqlConect.FindWithQuery<characters>("SELECT * FROM characters WHERE name=?", characterName) != null;
     }
 
     public void CharacterDelete(string characterName)
     {
         // soft delete the character so it can always be restored later
-        sqlConect.Execute("UPDATE Character SET deleted=1 WHERE name=?", characterName);
+        sqlConect.Execute("UPDATE characters SET deleted=1 WHERE name=?", characterName);
     }
 
     // returns the list of character names for that account
@@ -210,8 +203,8 @@ public class DatabaseTHDN:MonoBehaviour{
     public List<string> CharacterForAccount(string account)
     {
         List<string> result = new List<string>();
-        foreach (Character character in sqlConect.Query<Character>("SELECT * FROM Character WHERE account=? AND deleted=0", account))
-            result.Add(character.CharacterName);
+        foreach (characters character in sqlConect.Query<characters>("SELECT * FROM characters WHERE account=? AND deleted=0", account))
+            result.Add(character.name);
         return result;
     }
 
@@ -369,19 +362,19 @@ public class DatabaseTHDN:MonoBehaviour{
 
     public GameObject CharacterLoad(string characterName, List<Players> prefabs, bool isPreview)
     {
-        Character row = sqlConect.FindWithQuery<Character>("SELECT * FROM Character WHERE name=? AND deleted=0", characterName);
+        characters row = sqlConect.FindWithQuery<characters>("SELECT * FROM characters WHERE name=? AND deleted=0", characterName);
         if (row != null)
         {
             // instantiate based on the class name
-            Players prefab = prefabs.Find(p => p.name == row.className);
+            Players prefab = prefabs.Find(p => p.name == row.classname);
             if (prefab != null)
             {
                 GameObject go = Instantiate(prefab.gameObject);
                 Players players = go.GetComponent<Players>();
 
-                players.name               = row.CharacterName;
-                players.account            = row.Account;
-                players.className          = row.className;
+                players.name               = row.name;
+                players.account            = row.account;
+                players.className          = row.classname;
               
 
                 // is the position on a navmesh?
@@ -420,14 +413,14 @@ public class DatabaseTHDN:MonoBehaviour{
                 // => don't set it when loading previews though. only when
                 //    really joining the world (hence setOnline flag)
                 if (!isPreview)
-                    sqlConect.Execute("UPDATE Character SET online=1, lastsaved=? WHERE name=?", DateTime.UtcNow, characterName);
+                    sqlConect.Execute("UPDATE characters SET online=1, lastsaved=? WHERE name=?", DateTime.UtcNow, characterName);
 
                 // addon system hooks
                 Util.InvokeMany(typeof(DatabaseTHDN), this, "CharacterLoad_", players);
 
                 return go;
             }
-            else Debug.LogError("no prefab found for class: " + row.className);
+            else Debug.LogError("no prefab found for class: " + row.classname);
         }
         return null;
     }
@@ -547,10 +540,10 @@ public class DatabaseTHDN:MonoBehaviour{
         if (useTransaction) sqlConect.BeginTransaction();
 
         //Query DB for field
-        sqlConect.InsertOrReplace(new Character{
-            CharacterName = Players.name,
-            Account = Players.account,
-            className = Players.className,
+        sqlConect.InsertOrReplace(new characters{
+            name = Players.name,
+            account = Players.account,
+            classname = Players.className,
           
         });
 
@@ -675,7 +668,7 @@ public class DatabaseTHDN:MonoBehaviour{
     //     foreach (character_orders row in rows)
     //     {
     //         result.Add(row.coins);
-    //         sqlConect.Execute("UPDATE character_orders SET processed=1 WHERE orderid=?", row.orderid);
+    //         sqlConect.Execute("UPDATE characters_orders SET processed=1 WHERE orderid=?", row.orderid);
     //     }
     //     return result;
     // }

@@ -14,6 +14,9 @@ using System.Linq;
     [SyncVar]
     public float remainingLogoutTime;
 
+    [SyncVar]
+    public Classes classType = Classes.Normal;
+
     public Players()
     {
     }

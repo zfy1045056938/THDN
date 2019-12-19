@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Linq;
 
 
+
 public class NetworkAus : NetworkAuthenticator
 { [Header("Components")]
     public NetworkManagerTHDN manager;
@@ -13,12 +14,20 @@ public class NetworkAus : NetworkAuthenticator
     // login info for the local player
     // we don't just name it 'account' to avoid collisions in handshake
     [Header("Login")]
-    public string loginAccount = "";
-    public string loginPassword = "";
+    public string loginAccount = "admin";
+    public string loginPassword = "123";
 
     [Header("Security")]
     public string passwordSalt = "at_least_16_byte";
     public int accountMaxLength = 16;
+
+    public DatabaseTHDN database;
+
+
+    void Start()
+    {
+        database=GetComponent<DatabaseTHDN>();
+    }
 
     // client //////////////////////////////////////////////////////////////////
     public override void OnStartClient()
@@ -90,7 +99,7 @@ public class NetworkAus : NetworkAuthenticator
             if (IsAllowedAccountName(message.account))
             {
                 // validate account info
-                if (DatabaseTHDN.instance.TryLogin(message.account, message.pwd))
+                if (database.TryLogin(message.account, message.pwd))
                 {
                     // not in lobby and not in world yet?
                     if (!AccountLoggedIn(message.account))

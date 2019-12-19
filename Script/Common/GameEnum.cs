@@ -68,6 +68,13 @@ public enum Motion{
 
 }
 
+//Classes (For Player Classes to classIndex)
+public enum Classes{
+	Normal,
+	Warrior,
+	Hunter,
+}
+
 ///////////////////COMMON
 //Common Enum
 public enum SceneType{

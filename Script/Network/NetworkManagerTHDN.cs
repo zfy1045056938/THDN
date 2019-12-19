@@ -73,7 +73,7 @@ public class NetworkManagerTHDN: NetworkManager
     public int characterLimit = 4;
     public int characterNameMaxLength = 16;
     public float saveInterval = 60f; // in seconds
-
+   
     // store characters available message on client so that UI can access it
     [HideInInspector] public CharacterAvailableMsg charactersAvailableMsg;
 
@@ -247,9 +247,9 @@ public class NetworkManagerTHDN: NetworkManager
         // load from DatabaseTHDN
         // (avoid Linq for performance/gc. characters are loaded frequently!)
         List<Players> characters = new List<Players>();
-        foreach (string characterName in DatabaseTHDN.instance.CharacterForAccount(account))
+        foreach (string characterName in database.CharacterForAccount(account))
         {
-            GameObject player = DatabaseTHDN.instance.CharacterLoad(characterName, playerClasses, true);
+            GameObject player = database.CharacterLoad(characterName, playerClasses, true);
             characters.Add(player.GetComponent<Players>());
         }
 
@@ -359,7 +359,7 @@ public class NetworkManagerTHDN: NetworkManager
         player.name = characterName;
         player.account = account;
         player.className = classPrefab.name;
-        player.transform.position = GetStartPositionFor(player.className).position;
+        
         // for (int i = 0; i < player.inventorySize; ++i)
         // {
         //     // add empty slot or default item if any
@@ -389,34 +389,31 @@ public class NetworkManagerTHDN: NetworkManager
             {
                 // not existant yet?
                 string account = lobby[conn];
-                if (!DatabaseTHDN.instance.CharacterExists(message.names))
+                if (!database.CharacterExists(message.names))
                 {
                     // not too may characters created yet?
-                    if (DatabaseTHDN.instance.CharacterForAccount(account).Count < characterLimit)
+                    if (database.CharacterForAccount(account).Count < characterLimit)
                     {
                         // valid class index?
-                        if (0 <= message.classIndex && message.classIndex < playerClasses.Count)
-                        {
+                       
                             // create new character based on the prefab.
-                            Players player = CreateCharacter(playerClasses[message.classIndex].gameObject, message.names, account);
+                            Players player = CreateCharacter(playerClasses[message.className].gameObject, message.names, account);
 
                             // addon system hooks
                             Util.InvokeMany(typeof(NetworkManagerTHDN), this, "OnServerCharacterCreate_", message, player);
 
-                            // save the player
-                            DatabaseTHDN.instance.CharacterSave(player, false);
+                            if(player!=null){
+                            // save the player to db
+                            database.CharacterSave(player, false);
                             Destroy(player.gameObject);
-
+                            }
                             // send available characters list again, causing
                             // the client to switch to the character
                             // selection scene again
                             conn.Send(MakeCharactersAvailableMessage(account));
-                        }
-                        else
-                        {
-                            //print("character invalid class: " + message.classIndex);  <- don't show on live server
-                            ServerSendError(conn, "character invalid class", false);
-                        }
+
+                            Debug.Log("Create Success"+player.name);
+                      
                     }
                     else
                     {
@@ -457,7 +454,7 @@ public class NetworkManagerTHDN: NetworkManager
             // (only if we know that he is not ingame, otherwise lobby has
             //  no netMsg.conn key)
             string account = lobby[conn];
-            List<string> characters = DatabaseTHDN.instance.CharacterForAccount(account);
+            List<string> characters = database.CharacterForAccount(account);
 
             // validate index
             if (0 <= message.index && message.index < characters.Count)
@@ -465,7 +462,7 @@ public class NetworkManagerTHDN: NetworkManager
                 //print(account + " selected player " + characters[index]);
 
                 // load character data
-                GameObject go = DatabaseTHDN.instance.CharacterLoad(characters[message.index], playerClasses, false);
+                GameObject go = database.CharacterLoad(characters[message.index], playerClasses, false);
 
                 // add to client
                 NetworkServer.AddPlayerForConnection(conn, go);
@@ -499,14 +496,14 @@ public class NetworkManagerTHDN: NetworkManager
         if (lobby.ContainsKey(conn))
         {
             string account = lobby[conn];
-            List<string> characters = DatabaseTHDN.instance.CharacterForAccount(account);
+            List<string> characters = database.CharacterForAccount(account);
 
             // validate index
             if (0 <= message.index && message.index < characters.Count)
             {
                 // delete the character
                 print("delete character: " + characters[message.index]);
-                DatabaseTHDN.instance.CharacterDelete(characters[message.index]);
+                database.CharacterDelete(characters[message.index]);
 
                 // addon system hooks
                 Util.InvokeMany(typeof(NetworkManagerTHDN), this, "OnServerCharacterDelete_", message);
@@ -535,7 +532,7 @@ public class NetworkManagerTHDN: NetworkManager
     // duplicates.
     void SavePlayers()
     {
-        DatabaseTHDN.instance.CharacteraveMany(Players.onlinePlayers.Values);
+        database.CharacteraveMany(Players.onlinePlayers.Values);
         if (Players.onlinePlayers.Count > 0) Debug.Log("saved " + Players.onlinePlayers.Count + " player(s)");
     }
 
@@ -566,7 +563,7 @@ public class NetworkManagerTHDN: NetworkManager
         // save player (if any. nothing to save if disconnecting while in lobby.)
         if (conn.identity != null)
         {
-            DatabaseTHDN.instance.CharacterSave(conn.identity.GetComponent<Players>(),false);
+            database.CharacterSave(conn.identity.GetComponent<Players>(),false);
             print("saved:" + conn.identity.name);
         }
 

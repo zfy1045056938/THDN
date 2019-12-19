@@ -15,7 +15,7 @@ public partial class CharacterSelectMsg:MessageBase{
 
 public partial class CharacterCreateMsg:MessageBase{
     public string names;
-    public int classIndex;
+    public int className;
     
 }
 
