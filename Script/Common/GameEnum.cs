@@ -55,12 +55,34 @@ public enum InterType
 
 //Items
 public enum ItemType{
-
+	JUNK,
+	WEAPON,
+	ARMOR,
+	SPECIALITEMS,
+	
 }
 
+public enum StageType
+{
+	TOWN,
+	DUNGEON,
+	OUTDOOR,
+}
+
+public enum ItemRatity
+{
+	JUNK,
+	NORMAL,
+	RARE,
+	EPIC,
+}
 //Enemy
 public enum NpcType{
-
+	NORMAL,
+	QUEST,
+	MERCHANT,
+	BLACKSMITH,
+	OTHER,
 }
 
 //FSM

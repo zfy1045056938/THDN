@@ -272,21 +272,21 @@ public class NetworkManagerTHDN: NetworkManager
 
         // assign basic preview values like name and equipment
         player.name = character.name;
-        // for (int i = 0; i < character.equipment.Length; ++i)
-        // {
-        //     ItemSlot slot = character.equipment[i];
-        //     player.equipment.Add(slot);
-        //     if (slot.amount > 0)
-        //     {
-        //         // OnEquipmentChanged won't be called unless spawned, we
-        //         // need to refresh manually
-        //         player.RefreshLocation(i);
-        //     }
-        // }
+        for (int i = 0; i < character.equipment.Length; ++i)
+        {
+            ItemSlot slot = character.equipment[i];
+            player.equipment.Add(slot);
+            if (slot.amount > 0)
+            {
+                // OnEquipmentChanged won't be called unless spawned, we
+                // need to refresh manually
+                player.RefreshLocation(i);
+            }
+        }
 
         // add selection script
-        // preview.AddComponent<SelectableCharacter>();
-        // preview.GetComponent<SelectableCharacter>().index = selectionIndex;
+        preview.AddComponent<SelectableCharacter>();
+        preview.GetComponent<SelectableCharacter>().index = selectionIndex;
     }
 
     public void ClearPreviews()

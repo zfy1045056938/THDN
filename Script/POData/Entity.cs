@@ -6,9 +6,27 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Reflection;
 using System.Linq;
+using Mirror;
+using UnityEngine.AI;
 
+
+//Game Entity Base Classes Includes(For THDN has 3 Entities(Player,NPC,Monster))
+//1.Stats 
+//2.C/S Callback Handler Msg
+//3.
 public partial class Entity : NetworkBehaviour
 {
+
+
+    //Declare Player 
+    public SyncListInventory Inventory =new SyncInventory();
+    public SyncListEquipment equipment =new SyncListEquipment();
+
+    [SyncVar]public int gold=-1;
+    [SyncVar]public int money=-1;
+
+    [SyncVar]public int level=1;
+    
     public override bool Equals(object other)
     {
         return base.Equals(other);
