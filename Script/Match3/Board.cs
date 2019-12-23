@@ -6,7 +6,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using System.Linq;
 using Mirror;
-using Unity.Mathematics;
+
 using Random = Unity.Mathematics.Random;
 
 
@@ -87,7 +87,7 @@ public class Board : MonoBehaviour
     }
 
     [Header("RPG")] public Players player;
-    public Enemy enemy;
+    public Monster enemy;
 
 
     void Start()
@@ -102,7 +102,7 @@ public class Board : MonoBehaviour
         //
         player = FindObjectOfType<Players>();
         //
-        enemy = FindObjectOfType<Enemy>();
+        enemy = FindObjectOfType<Monster>();
         //
         m_boardDeadLock = GetComponent<BoardDeadLock>();
         //
@@ -131,7 +131,7 @@ public class Board : MonoBehaviour
         SetPlayerAndEnemey(player,enemy);
     }
 
-    private void SetPlayerAndEnemey(Players players, Enemy enemy1)
+    private void SetPlayerAndEnemey(Players players, Monster enemy1)
     {
         throw new System.NotImplementedException();
     }

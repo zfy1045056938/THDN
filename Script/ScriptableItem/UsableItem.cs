@@ -19,7 +19,7 @@ public class UsableItem : ScriptableItem
     
     public string tooltip;
     
-    public override StringBuilder Tooltip(string text)
+    public override StringBuilder Tooltip()
     {
        StringBuilder sb=  new StringBuilder(tooltip);
 
@@ -27,28 +27,25 @@ public class UsableItem : ScriptableItem
        sb.Replace("COLDDOWN", coldDown.ToString());
        return sb;
     }
-    
-    /////////////////VIRTUAL///////////////
-    public virtual bool CanUse(Players player,int inventoryIndex)
-    {
-        if (player.level >= itemLevel)
-        {
-           return player.GetItemCoolDown();
-        }
 
-        return false;
+
+    public bool CanUse(Players p, int inventoryIndex)
+    {
+        return FindEquipSlotFor(p, inventoryIndex) != -1;
     }
 
-    public virtual bool ItemsCooldown()
+    public bool CanEquip(Players p, int inventoryIndexs, int equipmentIndex)
     {
         return true;
     }
-    
-    //[client]
-    public virtual  void OnUsed(Players p){}
-    
-    public virtual  bool CanSplit(ScriptableItem items){}
-    
-    public virtual bool CanExchange(ScriptableItem items,Players p,NPC npc){}
-    
+
+    int FindEquipSlotFor(Players p, int inventoryIndex)
+    {
+        return 0;
+    }
+
+    public  void Use(Players p, int inventoryIndex)
+    {
+        
+    }
 }

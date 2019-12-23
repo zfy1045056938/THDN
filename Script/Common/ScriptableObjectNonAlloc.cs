@@ -10,10 +10,10 @@ using UnityEngine;
             get
             {
                 if (string.IsNullOrWhiteSpace(cacheName))
-                {
+                
                     cacheName = base.name;
                     return cacheName;
-                }
+                
             }
         }
 

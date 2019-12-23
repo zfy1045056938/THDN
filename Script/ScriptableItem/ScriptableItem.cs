@@ -33,18 +33,18 @@ public partial class ScriptableItem:ScriptableObjectNonAlloc{
     
     
     //Common tooltip
-    public virtual StringBuilder Tooltip(string text){
+    public virtual StringBuilder Tooltip(){
         
         StringBuilder sb= new StringBuilder(tooltip);
-        sb.Replace("ITEMNAME",itemName);
-        sb.Replace("ITEMRATITY", itemRatity);
-        sb.Replace("ITEMSELL", itemSell.ToString());
-        sb.Replace("ITEMSTACKSIZE", stackSize.ToString());
-        sb.Replace("ITEMDUR", itemDur.ToString());
+        sb.Replace("{ITEMNAME}",itemName);
+        sb.Replace("{ITEMRATITY}", itemRatity);
+        sb.Replace("{ITEMSELL}", itemSell.ToString());
+        sb.Replace("{ITEMSTACKSIZE}", stackSize.ToString());
+        sb.Replace("{ITEMDUR}", itemDur.ToString());
 
-        sb.Replace("CANSELLABLE", canSellable ? "YES" : "NO");
-        sb.Replace("CANREPAIRABLE", canRepairable?"YES":"NO");
-        sb.Replace("CANDESTORABLE", canDestorable?"YES":"NO");
+        sb.Replace("{CANSELLABLE}", canSellable ? "YES" : "NO");
+        sb.Replace("{CANREPAIRABLE}", canRepairable?"YES":"NO");
+        sb.Replace("{CANDESTORABLE}", canDestorable?"YES":"NO");
 
         
         return sb;
@@ -71,7 +71,7 @@ public partial class ScriptableItem:ScriptableObjectNonAlloc{
                     
                 }
             }
-
+            return cache;
         }
     }
     

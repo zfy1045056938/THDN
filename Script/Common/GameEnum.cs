@@ -97,6 +97,14 @@ public enum Classes{
 	Hunter,
 }
 
+
+//FSM(COMBAT UND COMBO effect)
+public enum DamageType {
+	Normal=0,
+	Block=1,
+	Crit=2,
+}
+
 ///////////////////COMMON
 //Common Enum
 public enum SceneType{

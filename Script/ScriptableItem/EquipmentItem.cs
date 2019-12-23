@@ -4,11 +4,13 @@ using System.Collections;
 using System.Linq;
 using System.Text;
 using Mirror;
+using Mirror.Examples.Basic;
 
 
 //equipment item in thdn for player who can equip or business with merchant
 //equipment item in game has some type includes
 //WEAPON || ARMOR || SPECIALITEM(IN DUNGEON CAN DESTORY WHEN LEAVE DUNGEON)
+[CreateAssetMenu(menuName = "ItemManager/Equipment")]
 public class EquipmentItem : UsableItem
 {
     
@@ -31,13 +33,15 @@ public class EquipmentItem : UsableItem
 
     public string tooltip = "";
     
-    public void CanEquip(Players p, EquipmentSlot slot)
+    public void CanEquip(Players p, int inventoryIndex,int equipmentIndex)
     {
         
     }
-    
-    
-    
+
+    public  bool CanUse(Player p, int inventoryIndex)
+    {
+        return true;
+    }
     
     public override StringBuilder Tooltip(string text)
     {
