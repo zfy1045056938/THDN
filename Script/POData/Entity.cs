@@ -77,10 +77,15 @@ public abstract class Entity : ScriptableObjectNonAlloc
             _target=value!=null?_target :null;
         }
     }
-    [SyncVar]int level=0;
+
+    [SyncVar]
+    private int _level;
+   public virtual int level{get{return _level;}set{
+        _level=value;
+    }}
     //player basic in entity are player health + skillability+powerBouns
     //in player have weapon und  equipment bouns then add to the entity values
-    
+
     [SerializeField]protected LinearInt _healthMax=new LinearInt{baseValue=100};
     public virtual int healthMax{
         get{
@@ -133,7 +138,7 @@ public abstract class Entity : ScriptableObjectNonAlloc
 
     //block needs equipment required that has percent by block(0.0~0.5)
     [SerializeField]LinearFloat _blockChance=new LinearFloat{baseValue=0.0f};
-    public float blockChance {
+    public virtual float blockChance {
         get{
             int buffBouns =0;
             int skillBouns=0;
@@ -147,6 +152,8 @@ public abstract class Entity : ScriptableObjectNonAlloc
     [Header("COMMON")]
     [SyncVar,SerializeField] int _gold =0;
     public int gold {get{return _gold;}set{_gold=math.max(value,0);}}
+
+    protected int Level { get => level; set => level = value; }
 
     [HideInInspector] public bool invincible=false;
     [Header("TextUI")]
@@ -164,7 +171,7 @@ public abstract class Entity : ScriptableObjectNonAlloc
     [Header("Sync")]
     //sync player inventory und equipment
     public SyncItemSlot Inventory =new SyncItemSlot();
-    public SyncEquipSlot equipment =new SyncEquipSlot();
+    public SyncItemSlot equipment =new SyncItemSlot();
     //TODO
     //public SyncListBuff buffs=new SyncListBuff(); 
 
@@ -238,6 +245,18 @@ public abstract class Entity : ScriptableObjectNonAlloc
         #region UI Module Interactive
 
         //Inventory 
+        public int GetInventoryIndexByname(string name){
+
+            for(int i=0;i<Inventory.Count;i++){
+                InventorySlot slot =Inventory[i];
+                //
+                if(slot.amount >0 && slot.item.name== name){
+                    return i;
+                }
+            }
+            return -1;
+        }
+        
 
         //Equipment
 
@@ -289,9 +308,13 @@ public abstract class Entity : ScriptableObjectNonAlloc
 
     [ClientRpc]
     public void RPCOnDamageReceived(int damage,DamageType damageType){
+        //ShowDamagePop
 
+        Util.InvokeMany(typeof(Entity),this,"OnDamageReceived_",damage,damageType);
     }
         #endregion
 
-    public abstract Entity OnAggro(Entity e);
+    public virtual void OnAggro(Entity e){}
+
+    //
 }

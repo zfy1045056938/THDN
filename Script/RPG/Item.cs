@@ -50,13 +50,13 @@ public partial  struct Item
     public int summonedExp;
 
 
-    public string Tooltip()
+    public override string Tooltip()
     {
         StringBuilder sb =new StringBuilder(data.Tooltip());
         sb.Replace("{SUMMONEDHEALTH}", summonedHealth);
         sb.Replace("{SUMMONLEVEL", summonedLevel);
         sb.Replace("{SUMMONEXP}", summonedExp);
         
-
+        return sb.ToString();
     }
 }

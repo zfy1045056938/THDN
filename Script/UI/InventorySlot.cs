@@ -27,7 +27,7 @@ public class InventorySlot : MonoBehaviour
 
    public int IncreaseAmount(int increase)
    {
-      int limit = math.clamp(increase, 0, item.maxStack - amount);
+      int limit = math.clamp(increase, 0, item.stackSize - amount);
       amount += limit;
       return limit;
    }
@@ -39,6 +39,7 @@ public class InventorySlot : MonoBehaviour
       StringBuilder sb = new StringBuilder(item.Tooltip());
       sb.Replace("{AMOUNT}", amount.ToString());
 
+      return sb.ToString();
    }
 }
 

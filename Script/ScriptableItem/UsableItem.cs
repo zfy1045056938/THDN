@@ -8,6 +8,7 @@ using Mirror;
 //items who can use or equip
 //LEVELREQUIRED: p.level> i.level
 //OTHERREQUIRED: p.sdi>i.level
+[CreateAssetMenu(menuName="ItemManager/UsableItem")]
 public class UsableItem : ScriptableItem
 {
     
@@ -17,15 +18,15 @@ public class UsableItem : ScriptableItem
     public int itemLevel;
     public int coldDown;
     
-    public string tooltip;
+    public  override string tooltip="";
     
-    public override StringBuilder Tooltip()
+    public override string Tooltip()
     {
        StringBuilder sb=  new StringBuilder(tooltip);
 
        sb.Replace("{ITEMLEVEL}", itemLevel.ToString());
        sb.Replace("COLDDOWN", coldDown.ToString());
-       return sb;
+       return sb.ToString();
     }
 
 

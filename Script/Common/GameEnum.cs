@@ -86,7 +86,14 @@ public enum NpcType{
 }
 
 //FSM
-public enum Motion{
+public enum state{
+	IDLE,
+	MOVING,
+	TRADE,
+	BATTLE,
+	TALKING,
+	CASTING 	//In AI plugins
+
 
 }
 

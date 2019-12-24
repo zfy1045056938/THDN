@@ -2,6 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using Mirror;
 
+
+[CreateAssetMenu(menuName="ItemManager/SummonableItem")]
 public abstract class SummonableItem : UsableItem
 {
     public Summonable summonPrefab;

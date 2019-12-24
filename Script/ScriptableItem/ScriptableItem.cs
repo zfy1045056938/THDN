@@ -26,14 +26,15 @@ public partial class ScriptableItem:ScriptableObjectNonAlloc{
     public Sprite image;
     
     //tooltip
-    public  string tooltip="" ;
+    [SerializeField,TextArea(1,30)]
+    protected   string tooltip  ;
 
 
     
     
     
     //Common tooltip
-    public virtual StringBuilder Tooltip(){
+    public virtual string Tooltip(){
         
         StringBuilder sb= new StringBuilder(tooltip);
         sb.Replace("{ITEMNAME}",itemName);
@@ -47,7 +48,7 @@ public partial class ScriptableItem:ScriptableObjectNonAlloc{
         sb.Replace("{CANDESTORABLE}", canDestorable?"YES":"NO");
 
         
-        return sb;
+        return sb.ToString();
     }
 
 

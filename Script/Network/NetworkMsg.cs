@@ -32,7 +32,9 @@ public partial class CharacterAvailableMsg:MessageBase{
     public partial struct CharacterPreview{
         public string name;
         public string className;
+
         //
+        public InventorySlot[] equipment;
     }
     public CharacterPreview[] characters;
 

@@ -1,7 +1,7 @@
 using UnityEngine;
+using Mirror;
 
-
-    public abstract class ScriptableObjectNonAlloc:ScriptableObject
+    public abstract class ScriptableObjectNonAlloc:NetworkBehaviour
     {
         private string cacheName;
 
@@ -14,8 +14,9 @@ using UnityEngine;
                     cacheName = base.name;
                     return cacheName;
                 
+            }set{
+                cacheName=base.name=value;
             }
         }
-
 
     }

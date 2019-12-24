@@ -274,7 +274,7 @@ public class NetworkManagerTHDN: NetworkManager
         player.name = character.name;
         for (int i = 0; i < character.equipment.Length; ++i)
         {
-            ItemSlot slot = character.equipment[i];
+            InventorySlot slot = character.equipment[i];
             player.equipment.Add(slot);
             if (slot.amount > 0)
             {
