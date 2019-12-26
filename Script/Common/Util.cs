@@ -44,4 +44,17 @@ public class Util
     {
         throw new NotImplementedException();
     }
+
+
+    public static bool IsCursorOverUserInterface(){
+        return true;
+    }
+
+    public static bool RaycastWithout(Ray hit, out RaycastHit p){
+        return Physics.Raycast(hit,out p);
+    }
+
+    public static float CloserDistance(Collider collider,Collider targetCollider){
+        return Vector3.Distance(collider.transform.position,targetCollider.transform.position);
+    }
 }

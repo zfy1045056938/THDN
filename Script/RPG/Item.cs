@@ -36,7 +36,7 @@ public partial  struct Item
     public string name => data.name;
     public int stackSize => data.stackSize;
     public int buyPrice => data.itemBuy;
-    public int sellPrice => data.itemSell;
+    public int sellPrice => data.itemSell;    
 
     public bool canSell => data.canSellable;
     public bool canDestory => data.canDestorable;
@@ -50,13 +50,14 @@ public partial  struct Item
     public int summonedExp;
 
 
-    public override string Tooltip()
+    public  string Tooltip()
     {
         StringBuilder sb =new StringBuilder(data.Tooltip());
-        sb.Replace("{SUMMONEDHEALTH}", summonedHealth);
-        sb.Replace("{SUMMONLEVEL", summonedLevel);
-        sb.Replace("{SUMMONEXP}", summonedExp);
-        
+        sb.Replace("{SUMMONEDHEALTH}", summonedHealth.ToString());
+        sb.Replace("{SUMMONLEVEL", summonedLevel.ToString());
+        sb.Replace("{SUMMONEXP}", summonedExp.ToString());
+        //
+        Util.InvokeMany(typeof(Item),this,"Tooltip_",sb);
         return sb.ToString();
     }
 }

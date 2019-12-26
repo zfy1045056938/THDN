@@ -16,12 +16,13 @@ public abstract class SummonableItem : UsableItem
         return base.CanUse(p, inventoryIndex) &&
                NetworkTime.time >= p.nextRiskyActionTime &&
                summonPrefab != null &&
-               p.invetory[inventoryIndex].item.summonHealth > 0 &&
-               p.inventory[inventoryIndex].item.summonLevel <= p.level;
+               p.Inventory[inventoryIndex].item.summonedHealth > 0 &&
+               p.Inventory[inventoryIndex].item.summonedLevel <= p.level;
     }
 
     public void Use(Players p, int inventoryIndex)
     {
+        base.Use(p,inventoryIndex);
         p.nextRiskyActionTime = NetworkTime.time + 1;
     }
 

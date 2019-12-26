@@ -8,7 +8,7 @@ using Mirror;
 //items who can use or equip
 //LEVELREQUIRED: p.level> i.level
 //OTHERREQUIRED: p.sdi>i.level
-[CreateAssetMenu(menuName="ItemManager/UsableItem")]
+
 public class UsableItem : ScriptableItem
 {
     
@@ -17,9 +17,12 @@ public class UsableItem : ScriptableItem
     //declare usable Item variable
     public int itemLevel;
     public int coldDown;
-    
-    public  override string tooltip="";
-    
+
+
+    [SerializeField] private string _cooldownCategory;
+
+    public string CooldownCategory => string.IsNullOrWhiteSpace(_cooldownCategory) ? name : _cooldownCategory;
+
     public override string Tooltip()
     {
        StringBuilder sb=  new StringBuilder(tooltip);

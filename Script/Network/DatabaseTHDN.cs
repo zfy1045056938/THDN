@@ -26,6 +26,18 @@ class characters
         // online status can be checked from external programs with either just
         // just 'online', or 'online && (DateTime.UtcNow - lastsaved) <= 1min)
         // which is robust to server crashes too.
+        public float x { get; set; }
+        public float y { get; set; }
+        public float z { get; set; }
+        public int health { get; set; }
+        public int mana { get; set; }
+        public int str { get; set; }
+        public int dex { get; set; }
+        public int inte { get; set; }
+        public int muti { get; set; }
+        public int coins { get; set; }
+        public float exp { get; set; }
+        public float skillExp { get; set; }
         public bool online { get; set; }
         public DateTime lastsaved { get; set; }
         public bool deleted { get; set; }
@@ -45,39 +57,39 @@ class characters
 class character_inventory{
     [PrimaryKey]
     [AutoIncrement]
-    public int IIDS { get; set; }
-    public string Character { get; set; }
-    public int ItemSlot { get; set; }
-    public string ItemName { get; set; }
-    public int SummonLevel { get; set; }
-    public int SummonHealth { get; set; }
-    public int SummonMoney { get; set; }
-    public int SummonExp { get; set; }
+    public string character { get; set; }
+
+    public int slot { get; set; }
+    public string name { get; set; }
+    public int amount { get; set; }
+    public int summonHealth { get; set; }
+    public int summonLevel { get; set; }
+    public int summonExp { get; set; }    
 }
 
 //equipment
 class character_equipment:character_inventory{}
 
 class character_skills{
+    [PrimaryKey]
+    public string character { get; set; }
 
+    public string name { get; set; }
+    public int level { get; set; }
+    public float costTimeEnd { get; set; }
+    public float cooldownEnd { get; set; }
 }
 
 class characters_buff{
+    [PrimaryKey]
+    public string character { get; set; }
 
-}
-
-class characters_card{
+    public string name { get; set; }
+    public int level { get; set; }
+    public float buffTimeEnd { get; set; }
     
 }
 
-
-class NPC{
-    [PrimaryKey][AutoIncrement]
-    public int NID { get; set; }
-    public string NName { get; set; }
-    public string NLoc { get; set; }
-    public int Money { get; set; }
-}
 
 //Monster
 //Skill
@@ -118,6 +130,14 @@ public class DatabaseTHDN:MonoBehaviour{
         // create tables if they don't exist yet or were deleted
         sqlConect.CreateTable<accounts>();
         sqlConect.CreateTable<characters>();
+        sqlConect.CreateTable<character_inventory>();
+        sqlConect.CreateIndex(nameof(character_inventory), new[] {"character", "slot"});
+        sqlConect.CreateTable<character_equipment>();
+        sqlConect.CreateIndex(nameof(character_equipment), new[] {"character", "slot"});
+        sqlConect.CreateTable<character_skills>();
+        sqlConect.CreateIndex(nameof(character_skills), new[] {"character", "name"});
+        sqlConect.CreateTable<characters_buff>();
+        sqlConect.CreateIndex(nameof(characters_buff), new[] {"character", "name"});
         
 
         // addon system hooks
@@ -223,115 +243,73 @@ public class DatabaseTHDN:MonoBehaviour{
 
     void LoadInventory(Players Players)
     {
-        // fill all slots first
-        for (int i = 0; i < Players.InventorySize; ++i)
-            Players.Inventory.Add(new SyncItemSlot());
-
-        // then load valid items and put into their slots
-        // (one big query is A LOT faster than querying each slot separately)
-        foreach (character_inventory row in sqlConect.Query<character_inventory>("SELECT * FROM character_inventory WHERE character=?", Players.name))
+        Debug.Log("Load Inventory DB");
+        for (int i = 0; i < Players.inventorySize; i++)
+        {
+            Players.Inventory.Add(new InventorySlot());
+            
+        }
+        //
+        foreach (character_inventory row in sqlConect.Query<character_inventory>(
+            "SELECT *FROM character WHERE account=? ", Players.name))
         {
             if (row.slot < Players.inventorySize)
             {
+                //has slot then load
                 if (ScriptableItem.dict.TryGetValue(row.name.GetStableHashCode(), out ScriptableItem itemData))
                 {
-                    Item item = new Item(itemData);
-                    item.summonedHealth = row.summonedHealth;
-                    item.summonedLevel = row.summonedLevel;
-                    item.summonedExperience = row.summonedExperience;
-                    Players.inventory[row.slot] = new ItemSlot(item, row.amount);
+                    Item item =new Item();
+                    item.summonedHealth = row.summonHealth;
+                    item.summonedLevel = row.summonLevel;
+                    item.summonedExp = row.summonExp;
+                    Players.Inventory[row.slot]=new InventorySlot(item,row.amount);
                 }
-                else Debug.LogWarning("LoadInventory: skipped item " + row.name + " for " + Players.name + " because it doesn't exist anymore. If it wasn't removed intentionally then make sure it's in the Resources folder.");
+                else
+                {
+                    Debug.Log("LoadInventory Failed");
+                }
             }
-            else Debug.LogWarning("LoadInventory: skipped slot " + row.slot + " for " + Players.name + " because it's bigger than size " + Players.inventorySize);
+            else
+            {
+                Debug.Log("LoadInventory Slot");
+            }
         }
+        
+
     }
 
     void LoadEquipment(Players Players)
     {
-        // fill all slots first
-        for (int i = 0; i < Players.equipmentInfo.Length; ++i)
-            Players.equipment.Add(new ItemSlot());
-
-        // then load valid equipment and put into their slots
-        // (one big query is A LOT faster than querying each slot separately)
-        foreach (character_equipment row in sqlConect.Query<character_equipment>("SELECT * FROM character_equipment WHERE character=?", Players.name))
+        
+        Debug.Log("Load Equipment DB");
+        for (int i = 0; i < Players.equipmentInfos.Length; i++)
         {
-            if (row.slot < Players.equipmentInfo.Length)
-            {
-                if (ScriptableItem.dict.TryGetValue(row.name.GetStableHashCode(), out ScriptableItem itemData))
-                {
-                    Item item = new Item(itemData);
-                    item.summonedHealth = row.summonedHealth;
-                    item.summonedLevel = row.summonedLevel;
-                    item.summonedExperience = row.summonedExperience;
-                    Players.equipment[row.slot] = new ItemSlot(item, row.amount);
-                }
-                else Debug.LogWarning("LoadEquipment: skipped item " + row.name + " for " + Players.name + " because it doesn't exist anymore. If it wasn't removed intentionally then make sure it's in the Resources folder.");
-            }
-            else Debug.LogWarning("LoadEquipment: skipped slot " + row.slot + " for " + Players.name + " because it's bigger than size " + Players.equipmentInfo.Length);
+            Players.equipment.Add(new InventorySlot());
+        }
+        foreach (character_equipment row in sqlConect.Query<character_equipment>("SELECT * FROM character_equipment WHERE name=?",
+            Players.name))
+        {
+           if(ScriptableItem.dict.TryGetValue(row.name.GetStableHashCode(),out ScriptableItem itemdata))
+           {
+               Item item = new Item(itemdata);
+               
+               item.summonedHealth = row.summonHealth;
+               item.summonedLevel = row.summonLevel;
+               item.summonedExp = row.summonExp;
+               Players.equipment[row.slot]=new InventorySlot(item,row.amount);
+           }
         }
     }
 
-    void LoadSkills(Players Players)
-    {
-        // load skills based on skill templates (the others don't matter)
-        // -> this way any skill changes in a prefab will be applied
-        //    to all existing Playerss every time (unlike item templates
-        //    which are only for newly created Character)
-
-        // fill all slots first
-        foreach (ScriptableSkill skillData in Players.skillTemplates)
-            Players.skills.Add(new Skill(skillData));
-
-        // then load learned skills and put into their slots
-        // (one big query is A LOT faster than querying each slot separately)
-        foreach (character_skills row in sqlConect.Query<character_skills>("SELECT * FROM character_skills WHERE character=?", Players.name))
-        {
-            int index = Players.skills.FindIndex(skill => skill.name == row.name);
-            if (index != -1)
-            {
-                Skill skill = Players.skills[index];
-                // make sure that 1 <= level <= maxlevel (in case we removed a skill
-                // level etc)
-                skill.level = Mathf.Clamp(row.level, 1, skill.maxLevel);
-                // make sure that 1 <= level <= maxlevel (in case we removed a skill
-                // level etc)
-                // castTimeEnd and cooldownEnd are based on NetworkTime.time
-                // which will be different when restarting a server, hence why
-                // we saved them as just the remaining times. so let's convert
-                // them back again.
-                skill.castTimeEnd = row.castTimeEnd + NetworkTime.time;
-                skill.cooldownEnd = row.cooldownEnd + NetworkTime.time;
-
-                Players.skills[index] = skill;
-            }
-        }
-    }
-
-    void LoadBuffs(Players Players)
-    {
-        // load buffs
-        // note: no check if we have learned the skill for that buff
-        //       since buffs may come from other people too
-        foreach (character_buffs row in sqlConect.Query<character_buffs>("SELECT * FROM character_buffs WHERE character=?", Players.name))
-        {
-            if (ScriptableSkill.dict.TryGetValue(row.name.GetStableHashCode(), out ScriptableSkill skillData))
-            {
-                // make sure that 1 <= level <= maxlevel (in case we removed a skill
-                // level etc)
-                int level = Mathf.Clamp(row.level, 1, skillData.maxLevel);
-                Buff buff = new Buff((BuffSkill)skillData, level);
-                // buffTimeEnd is based on NetworkTime.time, which will be
-                // different when restarting a server, hence why we saved
-                // them as just the remaining times. so let's convert them
-                // back again.
-                buff.buffTimeEnd = row.buffTimeEnd + NetworkTime.time;
-                Players.buffs.Add(buff);
-            }
-            else Debug.LogWarning("LoadBuffs: skipped buff " + row.name + " for " + Players.name + " because it doesn't exist anymore. If it wasn't removed intentionally then make sure it's in the Resources folder.");
-        }
-    }
+    // void LoadSkills(Players Players)
+    // {
+    //    
+    // }
+    //
+    // void LoadBuffs(Players Players)
+    // {
+    //     
+    // }
 
     // void LoadQuests(Players Players)
     // {
@@ -388,7 +366,17 @@ public class DatabaseTHDN:MonoBehaviour{
                 players.name               = row.name;
                 players.account            = row.account;
                 players.className          = row.classname;
-              
+                Vector3 position           =new Vector3(row.x,row.y,row.z);
+                players.health = row.health;
+                players.manaMax = row.mana;
+                players.str = row.str;
+                players.dex = row.dex;
+                players.inte = row.inte;
+                players.muti = row.muti;
+                players.exp = row.exp;
+                players.skillExp = row.skillExp;
+                players.gold = row.coins;
+
 
                 // is the position on a navmesh?
                 // it might not be if we changed the terrain, or if the Players
@@ -397,29 +385,26 @@ public class DatabaseTHDN:MonoBehaviour{
                 {
                     // agent.warp is recommended over transform.position and
                     // avoids all kinds of weird bugs
-                    Players.agent.Warp(position);
+                    players.agent.Warp(position);
                 }
                 // otherwise warp to start position
                 else
                 {
                     Transform start = NetworkManagerTHDN.GetNearestStartPosition(position);
-                    Players.agent.Warp(start.position);
+                    players.agent.Warp(start.position);
                     // no need to show the message all the time. it would spam
                     // the server logs too much.
                     //Debug.Log(Players.name + " spawn position reset because it's not on a NavMesh anymore. This can happen if the Players previously logged out in an instance or if the Terrain was changed.");
                 }
-
-                LoadInventory(Players);
-                LoadEquipment(Players);
-                LoadSkills(Players);
-                LoadBuffs(Players);
-              
-
+                
+                
+                //other
+                LoadInventory(players);
+                LoadEquipment(players);
+               
                 // assign health / mana after max values were fully loaded
                 // (they depend on equipment, buffs, etc.)
-                Players.health = row.health;
-                Players.mana = row.mana;
-
+               
                 // set 'online' directly. otherwise it would only be set during
                 // the next Characterave() call, which might take 5-10 minutes.
                 // => don't set it when loading previews though. only when
@@ -442,22 +427,24 @@ public class DatabaseTHDN:MonoBehaviour{
         // inventory: remove old entries first, then add all new ones
         // (we could use UPDATE where slot=... but deleting everything makes
         //  sure that there are never any ghosts)
-        sqlConect.Execute("DELETE FROM character_inventory WHERE character=?", Players.name);
-        for (int i = 0; i < Players.inventory.Count; ++i)
+        sqlConect.Execute("DELETE FROM character_inventory WHERE character =?", Players.name);
+        for (int i = 0; i < Players.Inventory.Count; i++)
         {
-            ItemSlot slot = Players.inventory[i];
-            if (slot.amount > 0) // only relevant items to save queries/storage/time
+            InventorySlot slot = Players.Inventory[i];
+            //
+            if (slot.amount > 0)
             {
-                // note: .Insert causes a 'Constraint' exception. use Replace.
-                sqlConect.InsertOrReplace(new character_inventory{
-                    character = Players.name,
-                    slot = i,
-                    name = slot.item.name,
-                    amount = slot.amount,
-                    summonedHealth = slot.item.summonedHealth,
-                    summonedLevel = slot.item.summonedLevel,
-                    summonedExperience = slot.item.summonedExperience
-                });
+                sqlConect.InsertOrReplace((new character_inventory
+                {
+                    character =  Players.name,
+                    slot=i,
+                    name=slot.item.name,
+                    amount=slot.amount,
+                    summonHealth = slot.item.summonedHealth,
+                    summonExp = slot.item.summonedExp,
+                    summonLevel = slot.item.summonedLevel
+                }));
+                
             }
         }
     }
@@ -478,57 +465,57 @@ public class DatabaseTHDN:MonoBehaviour{
                     slot = i,
                     name = slot.item.name,
                     amount = slot.amount,
-                    summonedHealth = slot.item.summonedHealth,
-                    summonedLevel = slot.item.summonedLevel,
-                    summonedExperience = slot.item.summonedExperience
+                    summonHealth = slot.item.summonedHealth,
+                    summonLevel = slot.item.summonedLevel,
+                    summonExp = slot.item.summonedExp
                 });
             }
         }
     }
 
-    void SaveSkills(Players Players)
-    {
-        // skills: remove old entries first, then add all new ones
-        sqlConect.Execute("DELETE FROM character_skills WHERE character=?", Players.name);
-        foreach (Skill skill in Players.skills)
-            if (skill.level > 0) // only learned skills to save queries/storage/time
-            {
-                // castTimeEnd and cooldownEnd are based on NetworkTime.time,
-                // which will be different when restarting the server, so let's
-                // convert them to the remaining time for easier save & load
-                // note: this does NOT work when trying to save character data
-                //       shortly before closing the editor or game because
-                //       NetworkTime.time is 0 then.
-                sqlConect.InsertOrReplace(new character_skills{
-                    character = Players.name,
-                    name = skill.name,
-                    level = skill.level,
-                    castTimeEnd = skill.CastTimeRemaining(),
-                    cooldownEnd = skill.CooldownRemaining()
-                });
-            }
-    }
+    // void SaveSkills(Players Players)
+    // {
+    //     // skills: remove old entries first, then add all new ones
+    //     sqlConect.Execute("DELETE FROM character_skills WHERE character=?", Players.name);
+    //     foreach (Skill skill in Players.skills)
+    //         if (skill.level > 0) // only learned skills to save queries/storage/time
+    //         {
+    //             // castTimeEnd and cooldownEnd are based on NetworkTime.time,
+    //             // which will be different when restarting the server, so let's
+    //             // convert them to the remaining time for easier save & load
+    //             // note: this does NOT work when trying to save character data
+    //             //       shortly before closing the editor or game because
+    //             //       NetworkTime.time is 0 then.
+    //             sqlConect.InsertOrReplace(new character_skills{
+    //                 character = Players.name,
+    //                 name = skill.name,
+    //                 level = skill.level,
+    //                 castTimeEnd = skill.CastTimeRemaining(),
+    //                 cooldownEnd = skill.CooldownRemaining()
+    //             });
+    //         }
+    // }
 
-    void SaveBuffs(Players Players)
-    {
-        // buffs: remove old entries first, then add all new ones
-        sqlConect.Execute("DELETE FROM character_buffs WHERE character=?", Players.name);
-        foreach (Buff buff in Players.buffs)
-        {
-            // buffTimeEnd is based on NetworkTime.time, which will be different
-            // when restarting the server, so let's convert them to the
-            // remaining time for easier save & load
-            // note: this does NOT work when trying to save character data
-            //       shortly before closing the editor or game because
-            //       NetworkTime.time is 0 then.
-            sqlConect.InsertOrReplace(new character_buffs{
-                character = Players.name,
-                name = buff.name,
-                level = buff.level,
-                buffTimeEnd = buff.BuffTimeRemaining()
-            });
-        }
-    }
+    // void SaveBuffs(Players Players)
+    // {
+    //     // buffs: remove old entries first, then add all new ones
+    //     sqlConect.Execute("DELETE FROM character_buffs WHERE character=?", Players.name);
+    //     foreach (Buff buff in Players.buffs)
+    //     {
+    //         // buffTimeEnd is based on NetworkTime.time, which will be different
+    //         // when restarting the server, so let's convert them to the
+    //         // remaining time for easier save & load
+    //         // note: this does NOT work when trying to save character data
+    //         //       shortly before closing the editor or game because
+    //         //       NetworkTime.time is 0 then.
+    //         sqlConect.InsertOrReplace(new character_buffs{
+    //             character = Players.name,
+    //             name = buff.name,
+    //             level = buff.level,
+    //             buffTimeEnd = buff.BuffTimeRemaining()
+    //         });
+    //     }
+    // }
 
     // void SaveQuests(Players Players)
     // {
@@ -555,17 +542,25 @@ public class DatabaseTHDN:MonoBehaviour{
         sqlConect.InsertOrReplace(new characters{
             name = Players.name,
             account = Players.account,
-            classname = Players.className,
-          
+            classname = Players.className,  
+            x=Players.transform.position.x,
+            y=Players.transform.position.y,
+            z=Players.transform.position.z,
+            health = Players.health,
+            mana=Players.manaMax,
+            str=Players.str,
+            inte = Players.inte,
+            muti = Players.muti,
+            exp = Players.exp,
+            skillExp = Players.skillExp,
+            online = online,
+            lastsaved = DateTime.Now
+            
         });
 
         SaveInventory(Players);
         SaveEquipment(Players);
-        SaveSkills(Players);
-        SaveBuffs(Players);
-        SaveQuests(Players);
-        // if (Players.InGuild()) SaveGuild(Players.guild, false); // TODO only if needs saving? but would be complicated
-
+       
         // addon system hooks
         Util.InvokeMany(typeof(DatabaseTHDN), this, "Characterave_", Players);
 

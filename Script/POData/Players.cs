@@ -8,6 +8,7 @@ using Unity.Entities;
 using UnityEngine.AI;
 using static ScriptableItem;
 
+
 [SerializeField]
 public partial struct EquipmentInfo{
     public string requiredCategory;
@@ -119,15 +120,28 @@ public partial struct EquipmentInfo{
         [SyncVar]public int dex;
         [SyncVar]public int inte;
         [SyncVar]public int muti;
+        
+        
 
-
-        [SyncVar,SerializeField]public int _exp=0;
+        [SyncVar,SerializeField]public float _exp=0;
         [SyncVar,SerializeField] public  int level=0;
-        public int exp{
+        public float exp{
             get{return _exp;}
             set{
                 _exp=value;
             }
+        }
+
+        [SyncVar, SerializeField] private float _skillExp = 0;
+
+        public float skillExp
+        {
+            get
+            {
+                return _skillExp; 
+                
+            }
+            set { _skillExp = value; }
         }
 
         //
@@ -150,21 +164,25 @@ public partial struct EquipmentInfo{
 
 
      
-    public  NavMeshAgent agent;
+   
     public static Dictionary<string,Players> onlinePlayers =new Dictionary<string, Players>();
    
 
-    [SyncVar]
-    public float remainingLogoutTime;
+    //last server time
+    public double allowLogoutTime => lastCombatTime+((NetworkTime.time));
+    public double remainingLogoutTime=>NetworkTime.time < allowLogoutTime?(allowLogoutTime-NetworkTime.time):0;
 
     [SyncVar]
     public Classes classType = Classes.Normal;
 
 
-    public float nextRiskyActionTime=1.0f;
+    public double nextRiskyActionTime=1.0;
 
-    //
+    [Header("Interactive with Movement")]
     Camera camera;
+    bool localPlayerClickThrough;
+    int CloserDistance;
+
 
     //Player bone use by change equipment(armor und weapon)
     Dictionary<string,Transform> skinBones= new Dictionary<string, Transform>();
@@ -212,6 +230,8 @@ public partial struct EquipmentInfo{
   public override void OnStartClient()
     {
         base.OnStartClient();
+
+
          //Func with Equipment callback  Update Model
             // equipment.Callback += OnEquipmentChanged;
 
@@ -220,10 +240,30 @@ public partial struct EquipmentInfo{
             }
     }
 
+
+    //更新客户端信息
+    //1.FSM更新状态
+    //2.状态变更()
+    //3.实体接触触发事件(Talking,Business,Battle(Match3))
+    //4.
     [Client]
     protected override void UpdateClient(){
+        //根据状态更新行为,分为移动状态,死亡状态，技能状态,攻击状态
+        //Inclient
+        if(isLocalPlayer){
+            if(state=="Moving"||state=="Idle"){
+                
+            }else if(state=="Casting"){
+                
+            }else if(state=="Dead"){
 
+            }
+
+        }
+        //hooks
+        Util.InvokeMany(typeof(Players),this,"UpdateClient_");
     }   
+
     #endregion
 
     #region  Server
@@ -259,13 +299,24 @@ public partial struct EquipmentInfo{
 
 
     //FSM SERVER
+
+    //IDLE=>Only Check Dead 
     [Server]
     string UpdateServer_IDLE(){
-        if(EventDied()){
-
+         // events sorted by priority (e.g. target doesn't matter if we died)
+        if (EventDied())
+        {
+            // we died.
+            OnDeath();
+            return "DEAD";
         }
+         return "IDLE"; // nothing interesting happened
+   
+    }
 
-        return"IDLE";
+    private bool OnDeath()
+    {
+        return state=="Dead"&& health<=0;
     }
 
     [Server]
@@ -275,17 +326,7 @@ public partial struct EquipmentInfo{
     }
 
 
-    [Server]
-    string UpdateServer_TRADE(){
-
-        return "IDLE";
-    }
-
-    [Server]
-    string UpdateServer_BATTLE(){
-
-        return "IDLE";
-    }
+ 
 
     [Server]
     string UpdateServer_CASTING(){
@@ -309,10 +350,38 @@ public partial struct EquipmentInfo{
 
         return "IDLE";
     }
+
+    //用于角色动作控制器，通过fsm获取动机并执行对应动作
+    //在服务器中，获取报文并将请求发送给客户端
+    //客户端接受报文并执行动机
     public override void LateUpdate()
     {
         base.LateUpdate();
+
+        //
+        foreach(Animator anim in GetComponentsInChildren<Animator>()){
+            if(anim!=null){
+                //IDLE -> Moving
+                anim.SetBool("Moving",state=="Moving"&&IsMoving()&&!IsCasting()&& entityState==EntityAnimState.MOVING);
+                //when player health <=0 then dead
+                anim.SetBool("Dead",state=="Dead" && state=="Dead"&&IsDead() && entityState==EntityAnimState.DEAD);
+                //Use SKill IN THDN THEER skill slot who can config in town, in dungeon player can't change skill .
+                anim.SetBool("Casting",state=="Casting"&&IsCasting()&&entityState==EntityAnimState.CASTING);
+                // anim.SetBool("")
+            }
+            //skill module TODO
+        }
+
+        //hooks
+        Util.InvokeMany(typeof(Players),this,"LateUpdate_");
+
+
     }
+
+    #region Motion
+
+
+    #endregion
 
   
 
@@ -337,10 +406,10 @@ public partial struct EquipmentInfo{
     [Server]
     public override string UpdateServer()
     {
+        //
         if(state=="IDLE")return UpdateServer_IDLE();
         if(state=="MOVING")return UpdateServer_MOVING();
-        if(state=="TRADE")return UpdateServer_TRADE();
-        if(state=="BATLLE")return UpdateServer_BATTLE();
+       
         if(state=="CASTING")return UpdateServer_CASTING();
         if(state=="DEAD")return UpdateServer_DEAD();
         //
@@ -368,10 +437,7 @@ public partial struct EquipmentInfo{
 
     #endregion
 
-    #region Skill Module
-
-    #endregion
-
+    
     public override void Start()
     {
       if(!isServer && !isClient) return;
@@ -395,11 +461,6 @@ public partial struct EquipmentInfo{
 
     bool EventTargetDisappeared(){return target==null;}
     bool EventMoveStart(){return state!="MOVING" && IsMoving();}
-
-    private bool IsMoving()
-    {
-        throw new NotImplementedException();
-    }
 
     bool EventMoveEnd(){return state =="MOVING" && !IsMoving();}
 
@@ -432,7 +493,56 @@ public partial struct EquipmentInfo{
         throw new NotImplementedException();
     }
 
+    #region Player Common Module
 
+    [Client]
+    //Movement ,player click target place then can move und show indic
+    //if trigger on entity check that type und active
+    //type==Merchant => business || quest accept || talking(dialogue system)
+    //type==Enemy => battle && quest track 
+    //typr==Normal=>InteractiveObject(Chest || EventPieces)
+    void SelectionHandling(){
+        //
+        if(Input.GetMouseButtonDown(0) && !Util.IsCursorOverUserInterface() && Input.touchCount <=1){
+            Ray ray = camera.ScreenPointToRay(Input.mousePosition); 
+            //
+            RaycastHit hit;
+            bool cast = localPlayerClickThrough?Util.RaycastWithout(ray,out hit):Physics.Raycast(ray,out hit);
+            //if get targtet in TriggerEnter then active motion
+            Entity entity = hit.transform.GetComponent<Entity>();
+            //if server.player >=2 needs check is localplayer
+            if(entity){
+                //Set Indicator in floor,circle
+                SetIndicator(hit.transform);
+                //
+                if(entity==target && entity!=this){
+                    //Check entity Type
+                    if(entity is Monster && npcType==NpcType.ENEMY && Util.CloserDistance(collider,target.collider)<= CloserDistance&& target.health>0 ){
+                        //Battle Time und active quest track if has quest(incrmen o n destory) 
+                        //active dialogue with enemy 
+                        
+
+                    }else if(entity is NPC && npcType==NpcType.MERCHANT && Util.CloserDistance(collider,target.collider)<=CloserDistance&&target.health>0){
+                        //Business panel
+                    }else if(entity is Monster && npcType==NpcType.ENEMY && Util.CloserDistance(collider,target.collider)<=CloserDistance&&target.health==0 &&((Monster)entity).HasLoot()){
+                        //Loot From Monster
+                    }
+                    
+                }
+                
+            }
+
+        }
+        //system hooks
+        Util.InvokeMany(typeof(Players),this,"HandlingMovement_");
+    }
+
+    //target place needs show Circle 
+    public void SetIndicator(Transform transform){
+
+    }
+
+    #endregion
 
 
 
@@ -443,4 +553,6 @@ public partial struct EquipmentInfo{
 
     #endregion
 
+
+   
 }

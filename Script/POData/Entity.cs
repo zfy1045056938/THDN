@@ -57,10 +57,10 @@ public abstract class Entity : ScriptableObjectNonAlloc
     public Animator animator;
     public AudioSource audioSource;
     public Collider collider;
-
+    public NpcType npcType=NpcType.NORMAL;  //default for entity 
     public bool is3D;
     [Header("State FSM")]
-    [SyncVar,SerializeField]string _state="IDLE";    //defaul state if move change state from entity
+    [SyncVar,SerializeField]string _state="Idle";    //defaul state if move change state from entity
     public string state=> _state;
     [SyncVar]
     public double lastCombatTime=0.0;
@@ -109,6 +109,7 @@ public abstract class Entity : ScriptableObjectNonAlloc
             int buffBouns=0;
             return _manaMax.Get(manaMax) + passiveBouns+buffBouns;
         }
+        set {value= _manaMax.Get(manaMax); }
     }
 
     [SerializeField]protected LinearInt _damage =new LinearInt{baseValue=100};
@@ -161,7 +162,7 @@ public abstract class Entity : ScriptableObjectNonAlloc
     public GameObject stunnedOverlay;
 
     protected double stunTimed;
-
+    public virtual EntityAnimState entityState{get;set;}
     [HideInInspector]public bool inSafeZone;    //Save house
 
     [Header("Other")]
@@ -316,5 +317,12 @@ public abstract class Entity : ScriptableObjectNonAlloc
 
     public virtual void OnAggro(Entity e){}
 
-    //
+    #region ENTITY MOTION
+    public bool IsMoving(){return state=="Moving"&&entityState ==EntityAnimState.MOVING;}
+    public bool IsDead(){return state == "Dead" && entityState==EntityAnimState.DEAD;}
+    public bool IsCasting(){return state=="Casting"&& entityState==EntityAnimState.CASTING;}
+    public bool IsBattle(){return state=="Idle" && entityState ==Entity.Attack;}
+    
+
+    #endregion
 }

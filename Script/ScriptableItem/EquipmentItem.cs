@@ -33,7 +33,7 @@ public class EquipmentItem : UsableItem
     public bool canBlock;
     public bool canLevelUp;    //BLACKSMITH
 
-    protected override string tooltip = "";
+
     
     public void CanEquip(Players p, int inventoryIndex,int equipmentIndex)
     {

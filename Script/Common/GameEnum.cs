@@ -79,6 +79,7 @@ public enum ItemRatity
 //Enemy
 public enum NpcType{
 	NORMAL,
+	ENEMY,	//InBattle(match3),or kill use by tools()
 	QUEST,
 	MERCHANT,
 	BLACKSMITH,
@@ -86,13 +87,13 @@ public enum NpcType{
 }
 
 //FSM
-public enum state{
+public enum EntityAnimState{
 	IDLE,
 	MOVING,
-	TRADE,
 	BATTLE,
-	TALKING,
-	CASTING 	//In AI plugins
+	CASTING,
+	DEAD,
+	ATTACK,	//In AI plugins
 
 
 }
