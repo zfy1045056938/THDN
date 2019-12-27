@@ -178,11 +178,9 @@ public class NetworkManagerTHDN: NetworkManager
     public override void OnStartServer()
     {
         // connect to DatabaseTHDN
-        try{
+      
         database.Connect();
-        }catch {
-            Debug.Log("can't connect");
-        }
+       
         // handshake packet handlers (in OnStartServer so that reconnecting works)
         NetworkServer.RegisterHandler<CharacterCreateMsg>(OnServerCharacterCreate);
         NetworkServer.RegisterHandler<CharacterSelectMsg>(OnServerCharacterSelect);
@@ -280,7 +278,7 @@ public class NetworkManagerTHDN: NetworkManager
             {
                 // OnEquipmentChanged won't be called unless spawned, we
                 // need to refresh manually
-                player.RefreshLocation(i);
+                player.RefreashLoc(i);
             }
         }
 
@@ -379,7 +377,7 @@ public class NetworkManagerTHDN: NetworkManager
 
     void OnServerCharacterCreate(NetworkConnection conn, CharacterCreateMsg message)
     {
-        //print("OnServerCharacterCreate " + conn);
+        print("OnServerCharacterCreate " + conn);
 
         // only while in lobby (aka after handshake and not ingame)
         if (lobby.ContainsKey(conn))
@@ -446,7 +444,7 @@ public class NetworkManagerTHDN: NetworkManager
 
     void OnServerCharacterSelect(NetworkConnection conn, CharacterSelectMsg message)
     {
-        //print("OnServerCharacterSelect");
+        print("OnServerCharacterSelect");
         // only while in lobby (aka after handshake and not ingame)
         if (lobby.ContainsKey(conn))
         {
@@ -490,7 +488,7 @@ public class NetworkManagerTHDN: NetworkManager
 
     void OnServerCharacterDelete(NetworkConnection conn, CharacterDeleteMsg message)
     {
-        //print("OnServerCharacterDelete " + conn);
+        print("OnServerCharacterDelete " + conn);
 
         // only while in lobby (aka after handshake and not ingame)
         if (lobby.ContainsKey(conn))

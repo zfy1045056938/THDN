@@ -5,7 +5,7 @@ using System.Collections;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-
+using UnityEngine.AI;
 
 
 //extra classes  for method
@@ -33,4 +33,14 @@ using System.Text.RegularExpressions;
            
 
         }
+
+        //
+        public static Vector3 NearestValidDestination(this NavMeshAgent agent,Vector3 destinaion){
+
+
+            
+
+            return agent.transform.position;
+        }
+
     }

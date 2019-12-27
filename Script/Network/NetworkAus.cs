@@ -48,8 +48,10 @@ public class NetworkAus : NetworkAuthenticator
         // Application.version can be modified under:
         // Edit -> Project Settings -> Player -> Bundle Version
         string hash = Util.PBKDF2Hash(loginPassword, passwordSalt + loginAccount);
-        LoginMsg message = new LoginMsg{account=loginAccount, pwd=hash, version=Application.version};
-        conn.Send(message);
+        LoginMsg message = new LoginMsg{account="admin", pwd="123", version=Application.version};
+    
+                    conn.Send(message);
+     
         print("login message was sent");
 
         // set state
@@ -92,15 +94,19 @@ public class NetworkAus : NetworkAuthenticator
 
     void OnServerLogin(NetworkConnection conn, LoginMsg message)
     {
+        Debug.Log("Login Module for server");
         // correct version?
         if (message.version == Application.version)
-        {
+        {   
+            Debug.Log("Version"+Application.version);
             // allowed account name?
             if (IsAllowedAccountName(message.account))
             {
+                Debug.Log("try login");
                 // validate account info
                 if (database.TryLogin(message.account, message.pwd))
                 {
+                    Debug.Log("log success");
                     // not in lobby and not in world yet?
                     if (!AccountLoggedIn(message.account))
                     {

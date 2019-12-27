@@ -70,4 +70,9 @@ public class Monster : Entity
     {
         base.UpdateOverlays();
     }
+
+    internal bool HasLoot()
+    {
+        throw new NotImplementedException();
+    }
 }

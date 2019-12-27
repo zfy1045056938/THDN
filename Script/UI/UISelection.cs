@@ -17,6 +17,7 @@ public class UISelection:MonoBehaviour{
     public Button createBtn;
     public Button startBtn;
     public Button quitBtn;
+    public Button deleteBtn;
 
     public UICreate createPanel;
     //
@@ -33,6 +34,20 @@ public class UISelection:MonoBehaviour{
             });
 
             startBtn.onClick.AddListener(()=>{
+                CharacterSelectMsg msg = new CharacterSelectMsg{
+                    index=selectionIndex,
+                };
+            NetworkClient.Send(msg);    
+            //
+            });
+
+            deleteBtn.onClick.AddListener(()=>{
+                CharacterDeleteMsg msg =new CharacterDeleteMsg{
+                    index=selectionIndex,
+                };
+                //
+                NetworkClient.Send(msg);
+                
                 
             });
 

@@ -9,12 +9,24 @@ using UnityEngine.AI;
 using static ScriptableItem;
 
 
+#region RPG Base Classes
+//////
+///用于客户端调用[command]
+//////
+
+//装备槽位获取，用于装备和物体的装备变更
 [SerializeField]
 public partial struct EquipmentInfo{
     public string requiredCategory;
     public Transform location;
     public ScriptObjectItemUndAmount defaultItem;
 }
+
+[SerializeField]
+public partial struct SkillbarEntry{
+
+}
+#endregion
 
 
 [RequireComponent(typeof(Animator))]
@@ -175,8 +187,17 @@ public partial struct EquipmentInfo{
     [SyncVar]
     public Classes classType = Classes.Normal;
 
+    [HideInInspector]
+    public float useSkillWhenClose =-1;
 
+    [HideInInspector]
+    
     public double nextRiskyActionTime=1.0;
+    
+    //always circle
+    [HideInInspector]
+    public GameObject indicator;
+    public GameObject indicatorPrefab;
 
     [Header("Interactive with Movement")]
     Camera camera;
@@ -233,7 +254,7 @@ public partial struct EquipmentInfo{
 
 
          //Func with Equipment callback  Update Model
-            // equipment.Callback += OnEquipmentChanged;
+            equipment.Callback += OnEquipmentChanged;
 
             for(int i=0;i<equipment.Count;++i){
                 RefreashLoc(i);
@@ -339,11 +360,6 @@ public partial struct EquipmentInfo{
 
         return "IDLE";
     }
-
-
-    
-
-
     [Client]
     string UpdateClient_IDLE(){
 
@@ -397,6 +413,10 @@ public partial struct EquipmentInfo{
     //////For interactive for object that occur event (loot || business)
     #region Command
 
+    [Command]
+    public void CmdSetTarget(NetworkIdentity entity){
+
+    }
     #endregion
 
   
@@ -418,15 +438,104 @@ public partial struct EquipmentInfo{
 
     
     #region  Equipment Module
-    void OnEquipmentChanged(){}
+
+    //Func<T> with equipment info 
+   public  void OnEquipmentChanged(SyncItemSlot.Operation operation,int index,InventorySlot oldSlot,InventorySlot newSlot){
+       RefreashLoc(index);
+    }
+
+    //Get All Bone with player
+     bool CanReplaceAllBones(SkinnedMeshRenderer skin){
+        foreach(Transform s in skin.bones){
+            if(s!=null){
+                if(skinBones.ContainsKey(s.name)){
+                    Debug.Log(s.name +"exists");
+                }
+            }
+        }
+         return true;}
 
 
-    void RefreashLoc(int equipIndex){
+         //when player equip new equipment at slot 
+         //check has equipment in slot then replace (refreash)
+    void ReplaceAllBone(SkinnedMeshRenderer skin){
+        Transform[] bones= skin.bones;  //get bone
+        //
+        for(int i=0;i<bones.Length;i++){
+            string bn = bones[i].name;  //get bone name
+            //contains key
+            if(!skinBones.TryGetValue(bn,out bones[i])){
+                //
+                Debug.Log(skin.name+"bone"+bones[i].name);
+            }
+            //change all bone(refreash)
+            skin.bones=bones;
+        }
+    }
+ 
 
+
+    //When Item Refreash 
+    //refreash itemslot und equipment
+  public  void RefreashLoc(int equipIndex){
+        InventorySlot itemSlot=new InventorySlot();
+        EquipmentInfo equipInfo=new EquipmentInfo();
+        //
+        if(equipInfo.requiredCategory!=null && equipInfo.location!=null){
+            //overwrite
+            if(equipInfo.location.childCount>0)Destroy(equipInfo.location.GetChild(0).gameObject);
+            EquipmentItem item=(EquipmentItem)itemSlot.item.data;
+            //has slot
+            if(itemSlot.amount>0){
+                //Load item prefab
+                GameObject itemPrefab =Instantiate(item.modelPrefab,equipInfo.location,false);
+                itemPrefab.name=item.modelPrefab.name;
+                //
+                SkinnedMeshRenderer skin = itemPrefab.GetComponentInChildren<SkinnedMeshRenderer>();
+                if(skin !=null && CanReplaceAllBones(skin)){
+                    ReplaceAllBone(skin);
+                }
+
+                //animator replace player damage style
+                Animator animator=itemPrefab.GetComponent<Animator>();
+                if(animator!=null){
+                    animator.runtimeAnimatorController= animator.runtimeAnimatorController;
+
+                    //restart all animators
+                    RebindAnimators();
+                }
+            }
+
+        }
+
+    }
+
+    //refreash animator 
+    void RebindAnimators(){
+        foreach(Animator a in GetComponentsInChildren<Animator>()){
+            a.Rebind();
+        }   
     }
     #endregion
 
     #region Inventory
+        //inventory module in thdn needs do these things
+        //1.storge item in client, callback server
+        //2.equip item to equipSlot
+        //3.extra inventory slot if need
+        //4.Trash,if player move item to trash then throw or relative throw to world
+        //5.use item if player use item(?itemtype),check stacksize und show itemEffect(heal or else),
+        //if stack ==0 then destory item
+        //6.if loot item has undenifitied ,check inventory has scroll to check the item if not then can't open
+        //relationship between animator und inventory 
+        bool InventoryAllowed(){
+            return state=="Idle"||
+            state=="Moving"||
+            state=="Casting"||
+            state=="Trading";
+        }
+
+        
 
         [ClientRpc]
         public void RPCUseItem(Item item){}
@@ -436,8 +545,14 @@ public partial struct EquipmentInfo{
 
 
     #endregion
-
     
+    #region Skill Module Command in client => clientrpc to server
+    //skill module includes
+    //1,skill tree
+    //2.skill bouns
+    //3.player bouns when level up(2)
+
+    #endregion
     public override void Start()
     {
       if(!isServer && !isClient) return;
@@ -488,11 +603,7 @@ public partial struct EquipmentInfo{
         throw new NotImplementedException();
     }
 
-    internal void RefreshLocation(int i)
-    {
-        throw new NotImplementedException();
-    }
-
+  
     #region Player Common Module
 
     [Client]
@@ -508,39 +619,80 @@ public partial struct EquipmentInfo{
             //
             RaycastHit hit;
             bool cast = localPlayerClickThrough?Util.RaycastWithout(ray,out hit):Physics.Raycast(ray,out hit);
-            //if get targtet in TriggerEnter then active motion
-            Entity entity = hit.transform.GetComponent<Entity>();
-            //if server.player >=2 needs check is localplayer
-            if(entity){
-                //Set Indicator in floor,circle
-                SetIndicator(hit.transform);
+            if(cast){
                 //
-                if(entity==target && entity!=this){
-                    //Check entity Type
-                    if(entity is Monster && npcType==NpcType.ENEMY && Util.CloserDistance(collider,target.collider)<= CloserDistance&& target.health>0 ){
-                        //Battle Time und active quest track if has quest(incrmen o n destory) 
-                        //active dialogue with enemy 
+                useSkillWhenClose=-1f;
+                //
+                Entity entity = hit.transform.GetComponent<Entity>();   
+                if(entity){
+                    SetIndicator(hit.transform);
+                    //
+                    if(entity==target && entity!=null ){
+                        //使用技能，
+                        if(CanAttack(entity)&& inDungeon ){
+                            TryUseSkill(0);
+                        }
+                        else if(entity is NPC && entity.health>0 &&
+                        Util.CloserDistance(collider,target.collider)<=interactiveRange){
+
+                        }else if(entity is Monster && entity.health>0 &&
+                        Util.CloserDistance(collider,target.collider)<=interactiveRange){
+                            
+                        }else if(entity is Monster && entity.health==0 &&
+                        Util.CloserDistance(collider,target.collider)<=interactiveRange&&
+                        ((Monster)entity).HasLoot()){
                         
-
-                    }else if(entity is NPC && npcType==NpcType.MERCHANT && Util.CloserDistance(collider,target.collider)<=CloserDistance&&target.health>0){
-                        //Business panel
-                    }else if(entity is Monster && npcType==NpcType.ENEMY && Util.CloserDistance(collider,target.collider)<=CloserDistance&&target.health==0 &&((Monster)entity).HasLoot()){
-                        //Loot From Monster
+                    }else{
+                        agent.stoppingDistance=interactiveRange;
+                        agent.destination=entity.collider.ClosestPoint(transform.position);
                     }
-                    
+                    //
+                    Util.InvokeMany(typeof(Players),this,"OnSelect_",entity);
+                }else{
+                    CmdSetTarget(entity.netIdentity);
                 }
-                
+            }else{
+                //new target
+                Vector3 bestDestination = agent.NearestValidDestination(hit.point);
+                SetIndicatorViaPos(bestDestination);
+                //
+                if(state=="Casting" || state=="Stunned"){
+                    //
+                }
             }
-
         }
-        //system hooks
-        Util.InvokeMany(typeof(Players),this,"HandlingMovement_");
+        }
+    }
+
+    private void TryUseSkill(int v)
+    {
+        throw new NotImplementedException();
+    }
+
+    private bool CanAttack(Entity entity)
+    {
+        throw new NotImplementedException();
+    }
+
+    #region  Selection Handling
+
+
+
+    private void SetIndicatorViaPos(Vector3 bestDestination)
+    {
+       if(!indicator)indicator=Instantiate(indicatorPrefab);
+       indicator.transform.parent=null;
+       indicator.transform.position=bestDestination;
     }
 
     //target place needs show Circle 
     public void SetIndicator(Transform transform){
-
+        if(!indicator)indicator=Instantiate(indicatorPrefab);
+        indicator.transform.SetParent(transform,true);
+        indicator.transform.position=transform.position;        
     }
+
+    #endregion
 
     #endregion
 
@@ -550,9 +702,20 @@ public partial struct EquipmentInfo{
 
 
     #region CombatSystem
-
+    //combat system in thdn needs rules these things
+    //1.The damage event always show after the turn end 
+    //2.System compare with the enemy speed to deside who go first(p.speed > entity.speed ? p.turn : entity.turn)
+    //3.player combat to target cal by equipment ability und matches count(MatchCollect.value) then sum(p+v) to enemy 
+    //4.entity -> player (health>0)=> command by entity ability
+    //5.when entity(2) health<=0 ,show console panel check winorlose:win->return:gameover
+    //6.about the exp manager,(solo or team(needs share))
+    
     #endregion
 
 
+    #region Match3 Reference 
+
+
+    #endregion
    
 }

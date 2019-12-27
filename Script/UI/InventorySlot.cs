@@ -6,7 +6,7 @@ using Mirror;
 using System.Text;
 using Unity.Mathematics;
 
-[SerializeField]
+[Serializable]
 public class InventorySlot : MonoBehaviour
 {
    public Item item;

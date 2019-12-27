@@ -65,7 +65,7 @@ public class NetworkNavAgentBanding : ScriptableObjectNonAlloc
 
     [TargetRpc]
     public void TargetResetMovment(Vector3 pos){
-        agent.ResetMovement();
+        agent.ResetPath();
         agent.Warp(pos);
     }
 

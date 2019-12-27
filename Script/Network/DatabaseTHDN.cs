@@ -56,7 +56,6 @@ class characters
 //inventory
 class character_inventory{
     [PrimaryKey]
-    [AutoIncrement]
     public string character { get; set; }
 
     public int slot { get; set; }
@@ -195,12 +194,14 @@ public class DatabaseTHDN:MonoBehaviour{
         // as usual, we will use the simplest solution possible:
         // create account if not exists, compare password otherwise.
         // no CMS communication necessary and good enough for an Indie MMORPG.
-
+        print("Try Login "+account);
         // not empty?
         if (!string.IsNullOrWhiteSpace(account) && !string.IsNullOrWhiteSpace(password))
         {
+            print("Try Login module"+account);
             // demo feature: create account if it doesn't exist yet.
             // note: sqlite-net has no InsertOrIgnore so we do it in two steps
+            print("create account if null");
             if (sqlConect.FindWithQuery<accounts>("SELECT * FROM accounts WHERE name=?", account) == null)
                 sqlConect.Insert(new accounts{ name=account, password=password});
 

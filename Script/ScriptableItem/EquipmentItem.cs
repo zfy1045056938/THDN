@@ -15,7 +15,7 @@ public class EquipmentItem : UsableItem
 {
     
     //Equipment Stats
-    
+    public GameObject modelPrefab;
   
 
     //equipment extra

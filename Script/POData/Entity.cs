@@ -168,6 +168,8 @@ public abstract class Entity : ScriptableObjectNonAlloc
     [Header("Other")]
     [HideInInspector]public bool isClient=false;
     [HideInInspector]public bool isServer=false;
+    [HideInInspector]public float interactiveRange=0.1f;
+    [HideInInspector]public bool inDungeon=false;
     
     [Header("Sync")]
     //sync player inventory und equipment
@@ -321,7 +323,7 @@ public abstract class Entity : ScriptableObjectNonAlloc
     public bool IsMoving(){return state=="Moving"&&entityState ==EntityAnimState.MOVING;}
     public bool IsDead(){return state == "Dead" && entityState==EntityAnimState.DEAD;}
     public bool IsCasting(){return state=="Casting"&& entityState==EntityAnimState.CASTING;}
-    public bool IsBattle(){return state=="Idle" && entityState ==Entity.Attack;}
+    public bool IsBattle(){return state=="Idle" && entityState ==EntityAnimState.ATTACK;}
     
 
     #endregion
