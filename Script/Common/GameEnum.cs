@@ -134,3 +134,46 @@ public enum NetworkState{
 	HandShake,
     Offline,
 }
+
+
+////////AI State
+public enum AIStateType{
+	None,
+	Idle,
+	Walking,
+	Deading,
+	Feeding,
+	Running,
+	Atk,
+	Dead,
+}
+
+//AI Type  For THDN
+//1.target can animaion behaviour by motion or object
+public enum AITargetType{
+	None,
+	VisualPlayer,
+	VisualObject,
+	VisualFood,
+	VisualLight,
+	VisualNoise,	//Noise from interactive object occur
+	VisualTrap,
+
+	
+}
+
+
+//trigger by enemy state
+public enum AITriggerType{Enter,Stay,Exit
+}
+
+//
+public enum AIBoneAlignmentType{
+	XAxis,
+	YAxis,
+	ZAxis,
+	XAxInverted,
+	YAxInverted,
+	ZAxInverted
+
+}

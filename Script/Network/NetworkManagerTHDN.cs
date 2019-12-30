@@ -259,6 +259,8 @@ public class NetworkManagerTHDN: NetworkManager
         characters.ForEach(player => Destroy(player.gameObject));
         return message;
     }
+    
+    
 
     // handshake: character selection //////////////////////////////////////////
     void LoadPreview(GameObject prefab, Transform location, int selectionIndex, CharacterAvailableMsg.CharacterPreview character)
@@ -358,19 +360,19 @@ public class NetworkManagerTHDN: NetworkManager
         player.account = account;
         player.className = classPrefab.name;
         
-        // for (int i = 0; i < player.inventorySize; ++i)
-        // {
-        //     // add empty slot or default item if any
-        //     player.inventory.Add(i < player.defaultItems.Length ? new ItemSlot(new Item(player.defaultItems[i].item), player.defaultItems[i].amount) : new ItemSlot());
-        // }
-        // for (int i = 0; i < player.equipmentInfo.Length; ++i)
-        // {
-        //     // add empty slot or default item if any
-        //     EquipmentInfo info = player.equipmentInfo[i];
-        //     player.equipment.Add(info.defaultItem.item != null ? new ItemSlot(new Item(info.defaultItem.item), info.defaultItem.amount) : new ItemSlot());
-        // }
-        // player.health = player.healthMax; // after equipment in case of boni
-        // player.mana = player.manaMax; // after equipment in case of boni
+        for (int i = 0; i < player.inventorySize; ++i)
+        {
+            // add empty slot or default item if any
+            player.Inventory.Add(i < player.defaultItem.Length ? new InventorySlot(new Item(player.defaultItem[i].item), player.defaultItem[i].amount) : new InventorySlot());
+        }
+        for (int i = 0; i < player.equipmentInfos.Length; ++i)
+        {
+            // add empty slot or default item if any
+            EquipmentInfo info = player.equipmentInfos[i];
+            player.equipment.Add(info.defaultItem.item != null ? new InventorySlot(new Item(info.defaultItem.item), info.defaultItem.amount) : new InventorySlot());
+        }
+        player.health = player.healthMax; // after equipment in case of boni
+        player.manaMax = player.manaMax; // after equipment in case of boni
 
         return player;
     }

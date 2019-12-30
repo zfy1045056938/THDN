@@ -48,7 +48,7 @@ public class NetworkAus : NetworkAuthenticator
         // Application.version can be modified under:
         // Edit -> Project Settings -> Player -> Bundle Version
         string hash = Util.PBKDF2Hash(loginPassword, passwordSalt + loginAccount);
-        LoginMsg message = new LoginMsg{account="admin", pwd="123", version=Application.version};
+        LoginMsg message = new LoginMsg{account=loginAccount, pwd=passwordSalt, version=Application.version};
     
                     conn.Send(message);
      
